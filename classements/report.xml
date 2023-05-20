@@ -1,0 +1,126 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dfxml xmloutputversion='1.0'>
+  <metadata 
+  xmlns='http://afflib.org/tcpflow/' 
+  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' 
+  xmlns:dc='http://purl.org/dc/elements/1.1/'>
+    <dc:type>Feature Extraction</dc:type>
+  </metadata>
+  <creator version='1.0'>
+    <program>TCPFLOW</program>
+    <version>1.6.1</version>
+    <build_environment>
+      <compiler>12.2.0 (12.2.0)</compiler>
+      <CPPFLAGS>-I/usr/local/include  -I/usr/local/include -DUTC_OFFSET=+0000</CPPFLAGS>
+      <CFLAGS>-g -march=x86-64 -mtune=generic -O3 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection -flto=auto -MD -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes -Wshadow -Wwrite-strings -Wcast-align -Waggregate-return -Wbad-function-cast -Wcast-qual -Wundef -Wredundant-decls -Wdisabled-optimization -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wall -Wstrict-prototypes -MD -D_FORTIFY_SOURCE=2 -Wpointer-arith -Wmissing-declarations -Wmissing-prototypes -Wshadow -Wwrite-strings -Wcast-align -Waggregate-return -Wbad-function-cast -Wcast-qual -Wundef -Wredundant-decls -Wdisabled-optimization -Wfloat-equal -Wmultichar -Wc++-compat -Wmissing-noreturn -Wall -Wstrict-prototypes</CFLAGS>
+      <CXXFLAGS>-g -march=x86-64 -mtune=generic -O3 -pipe -fno-plt -fexceptions         -Wp,-D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security         -fstack-clash-protection -fcf-protection -Wp,-D_GLIBCXX_ASSERTIONS -flto=auto -Wall -MD -D_FORTIFY_SOURCE=2 -Wpointer-arith -Wshadow -Wwrite-strings -Wcast-align -Wredundant-decls -Wdisabled-optimization -Wfloat-equal -Wmultichar -Wmissing-noreturn -Woverloaded-virtual -Wsign-promo -funit-at-a-time -Weffc++ -Wno-address-of-packed-member</CXXFLAGS>
+      <LDFLAGS>-L/usr/local/lib -Wl,-O1,--sort-common,--as-needed,-z,relro,-z,now -flto=auto -L/usr/local/lib</LDFLAGS>
+      <LIBS>-lcap-ng -lpcap -lcairo -lfontconfig -lfreetype -lbz2 -lpixman-1 -lexpat -lcrypto -lsqlite3 -lssl -lcrypto -ldl -lz </LIBS>
+      <compilation_date>2022-11-02T00:55:52</compilation_date>
+      <library name="boost" version="108000"/>
+      <library name="sqlite" version="3.39.4" source_id="2022-09-29 15:55:41 a29f9949895322123f7c38fbe94c649a9d6e6c9cd0c3b41c96d694552f26alt1"/>
+      <git commit="tcpflow-1.4.0beta1-367-gc98938b-dirty"/>
+    </build_environment>
+    <execution_environment>
+      <os_sysname>Linux</os_sysname>
+      <os_release>6.3.1-arch2-1</os_release>
+      <os_version>#1 SMP PREEMPT_DYNAMIC Wed, 10 May 2023 08:54:47 +0000</os_version>
+      <host>splash</host>
+      <arch>x86_64</arch>
+      <command_line>command line to be provided</command_line>
+      <uid>0</uid>
+      <username>root</username>
+      <start_time>2023-05-13T17:47:28Z</start_time>
+    </execution_environment>
+  </creator>
+  <configuration>
+  </configuration>
+  <tdelta>0</tdelta>
+  <configuration>
+    <fileobject>
+      <filename>127.000.000.001.03000-127.000.000.001.36266</filename>
+      <filesize>561</filesize>
+      <tcpflow startime='2023-05-13T17:50:28.574490Z' endtime='2023-05-13T17:50:28.611755Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='3000' dstport='36266' packets='6' len='965' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.41844-127.000.000.001.03000</filename>
+      <filesize>21326</filesize>
+      <tcpflow startime='2023-05-13T17:48:13.772291Z' endtime='2023-05-13T17:48:13.787618Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='41844' dstport='3000' packets='8' len='21862' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.03000-127.000.000.001.41844</filename>
+      <filesize>276</filesize>
+      <tcpflow startime='2023-05-13T17:48:13.772308Z' endtime='2023-05-13T17:48:13.787603Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='3000' dstport='41844' packets='6' len='680' />
+    </fileobject>
+    <fileobject>
+      <filesize>0</filesize>
+      <tcpflow startime='2023-05-13T17:48:33.572207Z' endtime='2023-05-13T17:48:33.572207Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='35142' dstport='3000' packets='1' len='74' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.35152-127.000.000.001.03000</filename>
+      <filesize>21326</filesize>
+      <tcpflow startime='2023-05-13T17:48:37.299036Z' endtime='2023-05-13T17:48:37.321427Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='35152' dstport='3000' packets='8' len='21862' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.03000-127.000.000.001.35152</filename>
+      <filesize>276</filesize>
+      <tcpflow startime='2023-05-13T17:48:37.299049Z' endtime='2023-05-13T17:48:37.321410Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='3000' dstport='35152' packets='6' len='680' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.45364-127.000.000.001.03000</filename>
+      <filesize>21326</filesize>
+      <tcpflow startime='2023-05-13T17:49:12.515252Z' endtime='2023-05-13T17:49:12.537030Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='45364' dstport='3000' packets='8' len='21862' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.37096-127.000.000.001.03000</filename>
+      <filesize>21326</filesize>
+      <tcpflow startime='2023-05-13T17:50:02.035630Z' endtime='2023-05-13T17:50:02.057509Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='37096' dstport='3000' packets='8' len='21862' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.40928-127.000.000.001.03000</filename>
+      <filesize>21326</filesize>
+      <tcpflow startime='2023-05-13T17:47:34.371300Z' endtime='2023-05-13T17:47:34.382639Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='40928' dstport='3000' packets='8' len='21862' />
+    </fileobject>
+    <fileobject>
+      <filesize>0</filesize>
+      <tcpflow startime='2023-05-13T17:48:33.572971Z' endtime='2023-05-13T17:48:33.572971Z' family='10' src_ipn='::1' dst_ipn='::1' srcport='49860' dstport='3000' packets='1' len='94' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.03000-127.000.000.001.45364</filename>
+      <filesize>276</filesize>
+      <tcpflow startime='2023-05-13T17:49:12.515266Z' endtime='2023-05-13T17:49:12.537010Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='3000' dstport='45364' packets='6' len='680' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.03000-127.000.000.001.37096</filename>
+      <filesize>276</filesize>
+      <tcpflow startime='2023-05-13T17:50:02.035643Z' endtime='2023-05-13T17:50:02.057492Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='3000' dstport='37096' packets='6' len='680' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.03000-127.000.000.001.40928</filename>
+      <filesize>310</filesize>
+      <tcpflow startime='2023-05-13T17:47:34.371314Z' endtime='2023-05-13T17:47:34.382626Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='3000' dstport='40928' packets='6' len='714' />
+    </fileobject>
+    <fileobject>
+      <filename>127.000.000.001.36266-127.000.000.001.03000</filename>
+      <filesize>21326</filesize>
+      <tcpflow startime='2023-05-13T17:50:28.574476Z' endtime='2023-05-13T17:50:28.611768Z' family='2' src_ipn='127.0.0.1' dst_ipn='127.0.0.1' srcport='36266' dstport='3000' packets='8' len='21862' />
+    </fileobject>
+  </configuration>
+  <summary />
+  <open_fds_at_end>0</open_fds_at_end>
+  <max_open_flows>0</max_open_flows>
+  <total_flows>14</total_flows>
+  <flow_map_size>14</flow_map_size>
+  <total_packets>86</total_packets>
+  <rusage>
+    <utime>0.013532</utime>
+    <stime>0.000000</stime>
+    <maxrss>15092</maxrss>
+    <minflt>1379</minflt>
+    <majflt>0</majflt>
+    <nswap>0</nswap>
+    <inblock>0</inblock>
+    <oublock>24</oublock>
+    <clocktime>220.051227</clocktime>
+  </rusage>
+</dfxml>
