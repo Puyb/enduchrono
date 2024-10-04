@@ -2,7 +2,7 @@
 const _ = require('lodash')
 
 const knex = require('knex')({
-  client: 'better-sqlite3',
+  client: 'sqlite3',
   connection: {
     filename: './data.db'
   }
@@ -41,9 +41,13 @@ const initDb = async () => {
       table.unique(['id'])
     })
     await knex.schema.createTable('tours', (table) => {
-      table.integer('dossard')
+      table.integer('id')
+      table.string('transpondeur')
+      table.integer('dossard').nullable()
       table.integer('timestamp')
       table.string('source')
+      table.boolean('duplicate')
+      table.unique(['id'])
       table.foreign('dossard').references('dossard').inTable('equipiers')
       table.index(['dossard'])
     })
@@ -99,7 +103,8 @@ const load = async () => {
           writable: true
         })
       },
-      tours: []
+      tours: [],
+      duplicate: []
     }
     equipes[equipe.equipe] = equipe
     categories.general.push(equipe)
@@ -118,13 +123,19 @@ const load = async () => {
   const tourRows = await knex.select('*').from('tours').orderBy('timestamp')
   for (const tourRow of tourRows) {
     tours.push(tourRow)
+    if (!tourRow.dossard) continue
+
     const equipier = equipiers[tourRow.dossard]
-    equipier.tours += 1
-    equipier.timestamp = tourRow.timestamp
     const equipe = equipes[equipier.equipe]
-    tourRow.duree = tourRow.timestamp - (_.last(equipe.tours)?.timestamp || 0)
-    equipe.tours.push(tourRow)
-    equipe.temps = tourRow.timestamp
+    if (!tourRow.duplicate) {
+      equipier.tours += 1
+      equipier.timestamp = tourRow.timestamp
+      tourRow.duree = tourRow.timestamp - (_.last(equipe.tours)?.timestamp || 0)
+      equipe.tours.push(tourRow)
+      equipe.temps = tourRow.timestamp
+    } else {
+      equipe.duplicate.push(tourRow)
+    }
   }
   calculClassements()
   await notifyAndGetHasChanged(() => {})
@@ -138,38 +149,58 @@ const addTranspondeur = async (dossard, id) => {
 const WINDOW_PERIOD = /*60 * */1000
 
 const isDuplicate = (timestamp, equipe, offset = WINDOW_PERIOD) => {
-  return equipe.tours.some(tour => tour.timestamp - offset < timestamp && timestamp < tour.timestamp + offset)
+  return equipe.tours.some(tour => {
+    console.log(tour.id, tour.timestamp - offset, timestamp, tour.timestamp + offset)
+    return tour.timestamp - offset < timestamp && timestamp < tour.timestamp + offset
+  })
 }
 
-const addTour = async (id, timestamp, source = 'chrono') => {
-  if (!(id in transpondeurs)) throw new Error(`Unknown transpondeur ${id}`)
-  const { dossard } = transpondeurs[id]
-  const equipier = equipiers[dossard]
-  if (!equipier) throw new Error(`Unknown dossard ${dossard}`)
-  const equipe = equipes[equipier.equipe]
-  if (isDuplicate(timestamp, equipe)) {
-    throw new Error('ignore duplicate')
+const addTour = async (id, transpondeur, timestamp, source = 'chrono') => {
+  if (!(transpondeur in transpondeurs)) {
+    const tour = { id, transpondeur, dossard: null, timestamp, source, duplicate: false }
+    await knex.insert(tour).into('tours')
+    tours.push(tour)
+    await Promise.all(listeners.tours.map(callback => callback(tour)))
+    return
   }
-  const tour = { dossard, timestamp, source }
+  const { dossard } = transpondeurs[transpondeur]
+  const equipier = equipiers[dossard]
+  if (!equipier) {
+    const tour = { id, transpondeur, dossard, timestamp, source, duplicate: false }
+    await knex.insert(tour).into('tours')
+    tours.push(tour)
+    await Promise.all(listeners.tours.map(callback => callback(tour)))
+    return
+  }
+
+  const equipe = equipes[equipier.equipe]
+  console.log('equipe', JSON.stringify(equipe))
+  const duplicate = isDuplicate(timestamp, equipe);
+
+  const tour = { id, transpondeur, dossard, timestamp, source, duplicate }
   await knex.insert(tour).into('tours')
   tours.push(tour)
-  equipier.tours += 1
-  equipier.timestamp = Math.max(equipier.timestamp, timestamp)
-  if (_.last(equipe.tours)?.timestamp < timestamp) {
-    tour.duree = timestamp - (_.last(equipe.tours)?.timestamp || 0)
-    equipe.tours.push(tour)
+  
+  if (!duplicate) {
+    equipier.tours += 1
+    equipier.timestamp = Math.max(equipier.timestamp, timestamp)
+    if (_.last(equipe.tours)?.timestamp < timestamp) {
+      tour.duree = timestamp - (_.last(equipe.tours)?.timestamp || 0)
+      equipe.tours.push(tour)
+    } else {
+      const index = _.findIndex(equipe.tours, tour => tour.timestamp > timestamp)
+      tour.duree = timestamp - (equipe.tours[index - 1]?.timestamp || 0)
+      equipe.tours.splice(index, 0, tour)
+      equipe.tours[index + 1].duree = equipe.tours[index + 1].timestamp - timestamp
+    }
+
+    equipe.temps = Math.max(equipe.temps, timestamp)
+    equipe._has_changed = true
+
+    calculClassements(equipe)
   } else {
-    const index = _.findIndex(equipe.tours, tour => tour.timestamp > timestamp)
-    tour.duree = timestamp - (equipe.tours[index - 1]?.timestamp || 0)
-    equipe.tours.splice(index, 0, tour)
-    equipe.tours[index + 1].duree = equipe.tours[index + 1].timestamp - timestamp
+    equipe.duplicate.push(tour)
   }
-
-  equipe.temps = Math.max(equipe.temps, timestamp)
-  equipe._has_changed = true
-    console.log('equipe', equipe)
-
-  calculClassements(equipe)
   return Promise.all([
     notifyAndGetHasChanged(async equipe => {
       await Promise.all(listeners.equipes.map(callback => callback(equipe)))
@@ -186,7 +217,6 @@ const notifyAndGetHasChanged = async (callback) => {
     changed.push(equipe)
     equipe._has_changed = false
   }))
-    console.log('changed', changed)
   return changed
 }
 
@@ -197,8 +227,6 @@ const calculClassementCategory = categorie => {
   for (const [position, equipe] of categories[categorie].entries()) {
     if (!equipe.tours.length) continue
     equipe[key] = position + 1
-      if (categorie !== 'general')
-      console.log('sort', JSON.stringify(equipe))
   }
 }
 

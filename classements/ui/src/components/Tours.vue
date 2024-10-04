@@ -1,10 +1,6 @@
 <template>
   <div class="tours">
-    <b-table striped hover small :items="$store.state.tours" :fields="fields">
-      <template #cell(index)="data">
-        {{ data.index + 1 }}
-      </template>
-
+    <b-table striped hover small :items="$store.state.tours" :fields="fields" :tbody-tr-class="rowClass">
       <template #cell(nom)="data">
         {{ $store.state.equipiers[data.item.dossard]?.nom }}
       </template>
@@ -23,17 +19,12 @@
       <template #cell(position_categorie)="data">
         {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.position_categorie }}
       </template>
-
-      <!-- Optional default data cell scoped slot -->
-      <template #cell()="data">
-        {{ data.value }}
-      </template>
     </b-table>
   </div>
 </template>
 
 <script>
-const format = v => Math.floor(v).toString().padStart(2, '0')
+import { formatTime } from '../utils'
 export default {
   name: 'Tours',
   props: {
@@ -42,7 +33,14 @@ export default {
   data() {
     return {
       fields: [
-        'index',
+        {
+          key: 'id',
+          sortable: true
+        },
+        {
+          key: 'transpondeur',
+          sortable: true
+        },
         {
           key: 'dossard',
           sortable: true
@@ -50,12 +48,12 @@ export default {
         {
           key: 'timestamp',
           sortable: true,
-          formatter(value) { return `${format(value / 3600000)}:${format(value / 60000 % 60)}:${format(value / 1000 % 60)}.${(value % 1000).toString().padStart(3, '0')}` },
+          formatter: formatTime
         },
         {
           key: 'duree',
           sortable: true,
-          formatter(value) { return `${format(value / 3600000)}:${format(value / 60000 % 60)}:${format(value / 1000 % 60)}.${(value % 1000).toString().padStart(3, '0')}` },
+          formatter: formatTime
         },
         {
           key: 'equipe',
@@ -84,6 +82,13 @@ export default {
       ],
     }
   },
+  methods: {
+    rowClass(item, type) {
+      if (!item || type !== 'row') return
+      if (!item.dossard) return 'table-danger'
+      if (item.duplicate) return 'table-warning'
+    }
+  }
 }
 </script>
 

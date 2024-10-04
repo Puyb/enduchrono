@@ -2,13 +2,19 @@
   <div class="equipes">
     <b-button-toolbar>
     <b-button-group>
-      <b-button :variant="currentCategorie==null ? 'info' : ''" @click="filterCategorie()">Général</b-button>
-      <b-button v-for="categorie in categories" :key="categorie" :variant="categorie===currentCategorie ? 'info' : ''" @click="filterCategorie(categorie)">{{ categorie }}</b-button>
+      <b-button :variant="currentCategorie==null ? 'info' : ''" @click="currentCategorie = null">Général</b-button>
+      <b-button v-for="categorie in categories" :key="categorie" :variant="categorie===currentCategorie ? 'info' : ''" @click="currentCategorie = categorie">{{ categorie }}</b-button>
     </b-button-group>
     </b-button-toolbar>
     <b-table id="equipes" striped hover small :items="equipes" :fields="fields"
              primary-key="equipe"
       :tbody-transition-props="transProps">
+      <template #cell(equipe)="data">
+          <div @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</div>
+      </template>
+      <template #cell(nom)="data">
+          <div @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</div>
+      </template>
       <template #cell(tours)="data">
         <transition name="highlight-change" mode="out-in">
           <div :key="data.item.tours">{{ data.item.tours }}</div>
@@ -20,7 +26,7 @@
 
 <script>
 import _ from 'lodash'
-const format = v => Math.floor(v).toString().padStart(2, '0')
+import { formatTime } from '../utils'
 export default {
   name: 'Equipes',
   props: {
@@ -60,7 +66,7 @@ export default {
         {
           key: 'temps',
           sortable: true,
-          formatter(value) { return `${format(value / 3600000)}:${format(value / 60000 % 60)}:${format(value / 1000 % 60)}.${(value % 1000).toString().padStart(3, '0')}` },
+          formatter: formatTime
         },
       ],
     }
@@ -86,12 +92,8 @@ export default {
     }
   },
   methods: {
-    filterCategorie(categorie = null) {
-      if (!categorie) {
-        this.$router.push('/equipes')
-        return
-      }
-      this.$router.push(`/equipes/${categorie}`)
+    showEquipe(numero) {
+      this.$router.push(`/equipes/${numero}`)
     }
   }
 }
