@@ -1,5 +1,5 @@
 'use strict'
-const { equipes, equipiers, transpondeurs, categories } = require('../models')
+const { equipes, equipiers, transpondeurs, categories, modifEquipe } = require('../models')
 
 module.exports = async function (fastify, opts) {
   fastify.get('/', async function (request, reply) {
@@ -17,5 +17,11 @@ module.exports = async function (fastify, opts) {
   })
   fastify.get('/categories', async function (request, reply) {
     return { categories }
+  })
+  fastify.post('/equipe/:id', async function (request, reply) {
+    const id = request.params.id
+    const data = request.body
+    await modifEquipe(id, data)
+    return {}
   })
 }

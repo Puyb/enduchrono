@@ -14,6 +14,7 @@
 
 <script>
 import { Line as LineChartGenerator } from 'vue-chartjs/legacy'
+import { formatDuree } from '../utils'
 
 import {
   Chart as ChartJS,
@@ -70,28 +71,52 @@ export default {
     plugins: {
       type: Array,
       default: () => []
-    }
+    },
+    colors: {
+      type: Array,
+      default: () => []
+    },
   },
   data() {
     return {
       chartOptions: {
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            ticks: {
+                callback(value) { return formatDuree(value).split('.')[0]; },
+            }
+          }
+        }
       }
     }
   },
   computed: {
     chartData() {
-      const colors = ['#0000aa', '#00aa00', '#aa0000', '#00aaaa', '#aa00aa']
+      const style = getComputedStyle(document.body);
+      const theme = {
+        primary: style.getPropertyValue('--primary'),
+        secondary: style.getPropertyValue('--secondary'),
+        success: style.getPropertyValue('--success'),
+        info: style.getPropertyValue('--info'),
+        warning: style.getPropertyValue('--warning'),
+        danger: style.getPropertyValue('--danger'),
+        light: style.getPropertyValue('--light'),
+        dark: style.getPropertyValue('--dark'),
+      };
+      const colors = this.colors?.map(color => (theme[color] || color)) || ['#0000aa', '#00aa00', '#aa0000', '#00aaaa', '#aa00aa']
       const labels = []
       const datasets = this.equipiers.map((equipier, index) => {
         return {
           label: `${equipier.dossard} ${equipier.nom} ${equipier.prenom}`,
+          borderColor: colors[index],
           backgroundColor: colors[index],
           data: this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard).map((tour, index2) => {
             if (labels.length <= index2) labels.push(index2)
             return tour.duree
-          }),
+          }).reverse(),
         }
       })
 

@@ -8,6 +8,7 @@ export default new Vuex.Store({
     tours: [],
     equipes: {},
     equipiers: {},
+    transpondeurs: {},
   },
   mutations: {
   },

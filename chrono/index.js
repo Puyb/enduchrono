@@ -1,5 +1,6 @@
 'use strict'
 const dgram = require('node:dgram')
+const axios = require('axios')
 
 const ADDRESS = '192.168.45.101'
 const PORT = 2008
@@ -14,6 +15,8 @@ const TRANSPONDEUR_REGEXP = /^<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d
 
 const socket = dgram.createSocket('udp4')
 let pendingCommand = null
+
+let count = 1
 
 socket.on('error', (err) => {
   console.error(`server error:\n${err.stack}`)
@@ -30,6 +33,11 @@ socket.on('message', async (message, rinfo) => {
     await send(ACK)
     const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
     console.log(id, timestamp)
+    await axios.post('http://localhost:3000/tour', {
+        id: count++,
+        transpondeur: id,
+        timestamp,
+    })
   } catch (err) {
     console.error(err)
   }

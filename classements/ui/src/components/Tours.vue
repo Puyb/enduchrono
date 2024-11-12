@@ -1,37 +1,56 @@
 <template>
-  <div class="tours">
-    <b-table striped hover small :items="$store.state.tours" :fields="fields" :tbody-tr-class="rowClass">
-      <template #cell(nom)="data">
-        {{ $store.state.equipiers[data.item.dossard]?.nom }}
-      </template>
-      <template #cell(prenom)="data">
-        {{ $store.state.equipiers[data.item.dossard]?.prenom }}
-      </template>
-      <template #cell(equipe)="data">
-        {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.nom }}
-      </template>
-      <template #cell(categorie)="data">
-        {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.categorie }}
-      </template>
-      <template #cell(position_general)="data">
-        {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.position_general }}
-      </template>
-      <template #cell(position_categorie)="data">
-        {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.position_categorie }}
-      </template>
-    </b-table>
+  <div class="d-flex flex-column h-100">
+    <div class="d-flex flex-column">
+      <b-container fluid>
+        <b-row>
+          <b-col cols="8">
+            <b-button-toolbar>
+              <b-button-group size="sm">
+                <b-button :variant="selection=='toursAll' ? 'info' : ''" @click="selection = 'toursAll'">Tous <b-badge pill>{{ toursAll.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursNormaux' ? 'info' : ''" @click="selection = 'toursNormaux'">Normaux <b-badge pill>{{ toursNormaux.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursDuplicate' ? 'info' : ''" @click="selection = 'toursDuplicate'">Dupliqués <b-badge pill>{{ toursDuplicate.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursDeleted' ? 'info' : ''" @click="selection = 'toursDeleted'">Supprimés <b-badge pill>{{ toursDeleted.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursUnknown' ? 'info' : ''" @click="selection = 'toursUnknown'">Inconnus <b-badge pill>{{ toursUnknown.length }}</b-badge></b-button>
+              </b-button-group>
+              <b-input-group size="sm">
+                <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
+              </b-input-group>
+            </b-button-toolbar>
+          </b-col>
+          <b-col cols="4">
+            <b-pagination
+              v-model="currentPage"
+              :total-rows="$store.state.tours.length"
+              :per-page="perPage"
+              aria-controls="tour-table"
+              first-number
+              last-number
+              size="sm"
+              align="right"
+            ></b-pagination>
+          </b-col>
+        </b-row>
+      </b-container>
+    </div>
+    <div class="d-flex flex-column flex-grow" style="overflow: scroll-y">
+      <ToursTable :tours="toursSelected" :fields="fields" :perPage="perPage" :currentPage="currentPage" />
+    </div>
   </div>
 </template>
 
 <script>
-import { formatTime } from '../utils'
+import { formatTime, formatDuree } from '../utils'
+import ToursTable from './ToursTable.vue'
 export default {
   name: 'Tours',
+  components: { ToursTable },
   props: {
     tours: [],
   },
   data() {
     return {
+      perPage: 100,
+      currentPage: 1,
       fields: [
         {
           key: 'id',
@@ -53,7 +72,7 @@ export default {
         {
           key: 'duree',
           sortable: true,
-          formatter: formatTime
+          formatter: formatDuree
         },
         {
           key: 'equipe',
@@ -80,14 +99,29 @@ export default {
           sortable: true
         },
       ],
+      selection: 'toursAll',
+      search: '',
     }
   },
+  computed: {
+    toursAll() { return this.$store.state.tours },
+    toursNormaux() { return this.$store.state.tours.filter(t => t.dossard && !t.duplicate && !t.deleted) },
+    toursDuplicate() { return this.$store.state.tours.filter(t => t.duplicate) },
+    toursDeleted() { return this.$store.state.tours.filter(t => t.deleted) },
+    toursUnknown() {
+        return this.$store.state.tours.filter(t => !t.dossard)
+    },
+    toursSelected() {
+      const words = this.search.toLowerCase().split(' ').filter(v => v)
+      let tours =  this[this.selection]
+      if (!words.length) return tours
+      return tours.filter(tour => {
+        const haystack = `${tours.transpondeur} ${tour.dossard}`.toLowerCase()
+        return words.every(word => haystack.includes(word))
+      })
+    } 
+  },
   methods: {
-    rowClass(item, type) {
-      if (!item || type !== 'row') return
-      if (!item.dossard) return 'table-danger'
-      if (item.duplicate) return 'table-warning'
-    }
   }
 }
 </script>

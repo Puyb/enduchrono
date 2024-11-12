@@ -13,6 +13,9 @@ module.exports = async function (fastify, opts) {
   await load().catch(console.error)
   fastify.register(require('fastify-file-upload'))
   fastify.register(require('@fastify/websocket'))
+  await fastify.register(require( '@fastify/cors'), {
+    origin: '*',
+  })
 
   // Do not touch the following lines
 

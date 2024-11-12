@@ -1,23 +1,29 @@
 <template>
   <div class="equipes">
     <b-button-toolbar>
-    <b-button-group>
-      <b-button :variant="currentCategorie==null ? 'info' : ''" @click="currentCategorie = null">Général</b-button>
-      <b-button v-for="categorie in categories" :key="categorie" :variant="categorie===currentCategorie ? 'info' : ''" @click="currentCategorie = categorie">{{ categorie }}</b-button>
-    </b-button-group>
+      <b-button-group>
+        <b-button :variant="currentCategorie==null ? 'info' : ''" @click="currentCategorie = null">Général</b-button>
+        <b-button v-for="categorie in categories" :key="categorie" :variant="categorie===currentCategorie ? 'info' : ''" @click="currentCategorie = categorie">{{ categorie }}</b-button>
+      </b-button-group>
+      <b-input-group>
+        <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
+      </b-input-group>
     </b-button-toolbar>
     <b-table id="equipes" striped hover small :items="equipes" :fields="fields"
              primary-key="equipe"
       :tbody-transition-props="transProps">
       <template #cell(equipe)="data">
-          <div @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</div>
+          <b-link @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</b-link>
       </template>
       <template #cell(nom)="data">
-          <div @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</div>
+          <b-link @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</b-link>
       </template>
       <template #cell(tours)="data">
         <transition name="highlight-change" mode="out-in">
-          <div :key="data.item.tours">{{ data.item.tours }}</div>
+          <div :key="data.item.tours">
+              {{ data.item.tours + data.item.penalite }}
+              <span class="text-danger" v-if="data.item.penalite">({{ data.item.penalite ? `${data.item.tours}${data.item.penalite}` : '' }} <BIconFlagFill></BIconFlagFill>)</span>
+          </div>
         </transition>
       </template>
     </b-table>
@@ -34,6 +40,7 @@ export default {
   },
   data() {
     return {
+        search: '',
       transProps: {
         // Transition name
         name: 'flip-list'
@@ -74,10 +81,17 @@ export default {
   computed: {
     equipes() {
       const equipes = []
+      const words = this.search.toLowerCase().split(' ').filter(v => v)
       for (const equipe of Object.values(this.$store.state.equipes)) {
-        if (!this.currentCategorie || equipe.categorie === this.currentCategorie) {
-          equipes.push(equipe)
-        }
+        if (this.currentCategorie && equipe.categorie !== this.currentCategorie) continue
+          if (words.length) {
+            const equipiers = Object.values(this.$store.state.equipiers)
+                  .filter(equipier => String(equipier.dossard).slice(0, -1) === String(equipe.equipe))
+                  .map(equipier => `${equipier.dossard} ${equipier.nom} ${equipier.prenom}`);
+            const haystack = `${equipe.equipe} ${equipe.nom} ${equipe.categorie} ${equipe.gerant_nom} ${equipe.gerant_prenom} ${equipiers.join(' ')}`.toLowerCase()
+            if (!words.every(word => haystack.includes(word))) continue;
+          }
+        equipes.push(equipe)
       }
       return _.sortBy(equipes, 'position_general');
     },
@@ -93,7 +107,7 @@ export default {
   },
   methods: {
     showEquipe(numero) {
-      this.$router.push(`/equipes/${numero}`)
+      this.$router.push(`/equipe/${numero}`)
     }
   }
 }
