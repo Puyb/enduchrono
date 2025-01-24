@@ -106,7 +106,7 @@ export default {
     },
     equipiers() {
       return Object.values(this.$store.state.equipiers).filter(equipier => String(equipier.dossard).slice(0, -1) === this.numero).map(equipier => {
-        const tours = this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard && !tour.duplicate && !tour.deleted);
+        const tours = this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard && !tour.status);
           return {
             ...equipier,
             tours: tours.length,
@@ -116,16 +116,21 @@ export default {
       });
     },
     tours() {
-      return this.$store.state.tours
-        .filter(tour => String(tour.dossard).slice(0, -1) === this.numero);
+      const tours = this.$store.state.tours
+        .filter(tour => String(tour.dossard).slice(0, -1) === this.numero)
+      if (this.$store.state.course.status === 'TEST') {
+        return tours.filter(t => t.status === 'ignore')
+      } else {
+        return tours.filter(t => t.status !== 'ignore')
+      }
     },
   },
   methods: {
     rowClass(item, type) {
       if (!item || type !== 'row') return
       const classes = []
-      if (item.deleted) classes.push('text-decoration-line-through-red')
-      if (item.duplicate) classes.push('text-decoration-line-through-blue')
+      if (item.status === 'deleted') classes.push('text-decoration-line-through-red')
+      if (item.status === 'duplicate') classes.push('text-decoration-line-through-blue')
       classes.push(`table-${this.equipierColors[String(item.dossard).slice(-1)]}`)
       return classes
     },

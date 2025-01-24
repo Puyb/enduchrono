@@ -5,12 +5,20 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
+    URL: '',
+    time: 0,
+    error: null,
+    course: {},
     tours: [],
     equipes: {},
     equipiers: {},
-    transpondeurs: {},
+    transpondeurs: [],
+    filenames: [],
   },
   mutations: {
+    setStatus(state, status) {
+      state.course.status = status
+    }
   },
   actions: {
   },

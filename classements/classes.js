@@ -56,12 +56,12 @@ class Tour extends Base {
     Object.defineProperty(this, 'duree', {
       enumerable: true,
       get() {
-        if (this.duplicate || this.deleted) return
+        if (this.status) return null
         const equipe = equipes[String(this.dossard).slice(0, -1)]
         if (!equipe) return null
         let previousIndex = equipe.tours.indexOf(this) - 1
         let previous = equipe.tours[previousIndex]
-        while (previous && (previous?.duplicate || previous?.deleted)) {
+        while (previous && previous?.status) {
           previous = equipe.tours[--previousIndex]
         }
         return this.timestamp - (previous?.timestamp || 0)
@@ -85,4 +85,5 @@ module.exports = {
   equipes,
   equipiers,
   categories,
+  isSameEquipe,
 }

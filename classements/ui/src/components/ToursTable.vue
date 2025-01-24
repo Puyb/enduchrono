@@ -1,9 +1,9 @@
 <template>
-  <b-table id="tours-table" striped sticky-header hover small :items="tours" :fields="fields" :tbody-tr-class="rowClass" :perPage="perPage" :currentPage="currentPage">
+  <b-table id="tours-table" striped sticky-header="100vh" hover small :items="tours" :fields="fields" :tbody-tr-class="rowClass" :perPage="perPage" :currentPage="currentPage">
     <template #cell(id)="data">
       {{ data.item.id }}
-      <b-button v-if="!data.item.deleted && !data.item.duplicate" variant="danger" @click="deleteTour(data.item)" size="sm" class="tour-delete"><b-icon-trash /></b-button>
-      <b-button v-if="data.item.deleted || data.item.duplicate" variant="danger" @click="deleteTour(data.item)" size="sm" class="tour-delete"><b-icon-recycle /></b-button>
+      <b-button v-if="!data.item.status" variant="danger" @click="deleteTour(data.item)" size="sm" class="tour-delete"><b-icon-trash /></b-button>
+      <b-button v-if="['deleted', 'duplicate'].includes(data.item.status)" variant="danger" @click="deleteTour(data.item)" size="sm" class="tour-delete"><b-icon-recycle /></b-button>
     </template>
     <template #cell(nom)="data">
       {{ $store.state.equipiers[data.item.dossard]?.nom }}
@@ -53,8 +53,8 @@ export default {
       if (!item || type !== 'row') return
       const classes = []
       if (this.tbodyTrClass) classes.push(this.tbodyTrClass(item, type))
-      if (item.deleted) classes.push('text-decoration-line-through-red')
-      if (item.duplicate) classes.push('text-decoration-line-through-blue')
+      if (item.status === 'deleted') classes.push('text-decoration-line-through-red')
+      if (item.status === 'duplicate') classes.push('text-decoration-line-through-blue')
       return classes
     },
     showEquipe(dossard) {
@@ -78,11 +78,11 @@ export default {
       }
     },
     numero(tour) {
-      if (!this._toursParEquipes) {
-        this._toursParEquipes = groupBy(this.$store.state.tours.filter(t => t.dossard && !t.deleted && !t.duplicate), t => String(t.dossard).slice(0, -1))
+      if (!this._toursParEquipes || !Object.keys(this._toursParEquipes).length) {
+        this._toursParEquipes = groupBy(this.$store.state.tours.filter(t => t.dossard && !t.status), t => String(t.dossard).slice(0, -1))
         setTimeout(() => delete this._toursParEquipes, 100);
       }
-      return (this._toursParEquipes[String(tour.dossard).slice(0, -1)].indexOf(tour) + 1) || null
+      return (this._toursParEquipes[String(tour.dossard).slice(0, -1)]?.indexOf(tour) + 1) || null
     }
   }
 }
@@ -97,6 +97,11 @@ export default {
 }
 :deep(tr.text-decoration-line-through-blue) {
   text-decoration: line-through blue 0.2em wavy;
+}
+@supports (position: sticky) {
+  .b-table-sticky-header > :deep(.table.b-table > thead > tr > th) {
+    position: sticky !important;
+  }
 }
 </style>
 

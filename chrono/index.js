@@ -1,77 +1,100 @@
 'use strict'
-const dgram = require('node:dgram')
-const axios = require('axios')
+import Fastify from 'fastify'
+import chrono from './chrono.js'
+import model from './model.js'
+import EventEmitter from 'node:events'
+import FastifyWebsocket from '@fastify/websocket'
 
-const ADDRESS = '192.168.45.101'
-const PORT = 2008
-const START = Buffer.from('1b07', 'hex')
-const STOP = Buffer.from('1b135c', 'hex')
-const STATUS = Buffer.from('1b05', 'hex')
-const ACK = Buffer.from('1b11', 'hex')
-const REPEAT = Buffer.from('1b12', 'hex')
-
-const TRANSPONDEUR_REGEXP = /^<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d+) (\d+)>/
-// <STA 119371 00:00'11"648 99 01 3 1579>
-
-const socket = dgram.createSocket('udp4')
-let pendingCommand = null
-
-let count = 1
-
-socket.on('error', (err) => {
-  console.error(`server error:\n${err.stack}`)
-  socket.close()
-})
-
-socket.on('message', async (message, rinfo) => {
+const event = new EventEmitter()
+chrono.on('passage', async ({ transpondeur, timestamp }) => {
   try {
-    console.log(`server got: ${message.toString()} from ${rinfo.address}:${rinfo.port}`)
-    if (pendingCommand) return pendingCommand(message)
-    const match = message.toString().match(TRANSPONDEUR_REGEXP)
-    if (!match) return
-    const [, id, hour, minute, second, milli] = match
-    await send(ACK)
-    const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
-    console.log(id, timestamp)
-    await axios.post('http://localhost:3000/tour', {
-        id: count++,
-        transpondeur: id,
+    const id = await model.savePassage({ transpondeur, timestamp })
+    event.emit('passage', {
+      passage: { 
+        id,
+        transpondeur,
         timestamp,
+      },
     })
   } catch (err) {
     console.error(err)
   }
 })
 
-socket.on('listening', async () => {
-  try {
-    const address = socket.address()
-    console.log(`server listening ${address.address}:${address.port}`)
-    await command(STOP)
-    await command(START)
-  } catch (err) {
-    console.error(err)
-  }
+const fastify = Fastify({
+  logger: true
 })
+fastify.register(FastifyWebsocket)
 
-const send = async message => {
-  return new Promise((resolve, reject) => {
-    console.log(`sending ${message.toString('hex')}`)
-    socket.send(message, 0, message.length, PORT, ADDRESS, function (err, bytes) {
-      if (err) return reject(err)
-      resolve(bytes)
+fastify.register(async function(fastify) {
+  fastify.post('/start', async function (request, reply) {
+    await model.createDb()
+    await chrono.start()
+    reply.send({})
+  })
+
+  fastify.post('/stop', async function (request, reply) {
+    await chrono.stop()
+    await model.closeDb()
+    reply.send({})
+  })
+
+  fastify.get('/status', async function (request, reply) {
+    reply.send({})
+  })
+
+  fastify.get('/tours', { websocket: true }, async (socket, req) => {
+    const from = parseInt(req.query.from)
+    const send = async data => {
+      try {
+        console.log('sending to websocket', JSON.stringify(data))
+        await socket.send(JSON.stringify(data))
+      } catch (err) {
+        console.error('error in send passage', err)
+      }
+    }
+
+    const passages = await model.getPassages(from)
+    for (const passage of passages) {
+      console.log(passage)
+      await send(passage)
+    }
+
+    event.on('passage', send)
+    chrono.on('status', send)
+    
+    socket.on('message', message => {
+    })
+    const exit = async () => {
+      console.log('exiting')
+      await socket.close()
+      process.exit()
+    }
+    process.on('SIGINT', exit)
+    process.on('SIGTERM', exit)
+
+    socket.on('close', () => {
+      event.removeListener('passage', send)
+      chrono.removeListener('status', send)
+      process.removeListener('SIGINT', exit)
+      process.removeListener('SIGTERM', exit)
     })
   })
-}
+})
 
-const command = async (message) => {
-  return new Promise((resolve, reject) => {
-    pendingCommand = resolve
-    setTimeout(() => { reject(new Error('timeout on command')) }, 1000)
-    send(message).catch(reject)
-  }).finally(() => {
-    pendingCommand = null
-  })
+try {
+  await chrono.init()
+  // setup status check interval
+  setInterval(async () => {
+    try {
+      // FIXME
+      await chrono.check()
+    } catch (err) {
+      console.error(err)
+    }
+  }, 1000)
+  await fastify.listen({ port: 3001 })
+} catch (err) {
+  console.error(err)
+  process.exit(1)
 }
-
-socket.bind(PORT)

@@ -1,20 +1,72 @@
 'use strict'
-const _ = require('lodash')
-const klasses = require('./classes')
-const { Equipe, Equipier, Tour, Transpondeur, tours, transpondeurs, equipes, equipiers, categories } = klasses
+import _ from 'lodash'
+import fs from 'node:fs/promises'
+import { exists } from './utils.js'
+import path from 'path'
+import Knex from 'knex'
+import klasses from './classes.js'
+export const { Equipe, Equipier, Tour, Transpondeur, tours, transpondeurs, equipes, equipiers, categories } = klasses
 
-const DUPLICATE_WINDOW_PERIOD = /*60000*/1000
-const COURSE_DUREE = 6 * 3600 * 1000
+export const DUPLICATE_WINDOW_PERIOD = /*60000*/1000
+export const COURSE_DUREE = 6 * 3600 * 1000
 
-const knex = require('knex')({
-  client: 'sqlite3',
-  connection: {
-    filename: './data.db'
+const DIR = './'
+const CURRENT_FILENAME = path.join(DIR, 'current.db')
+
+export const STATUS = ['TEST', 'DEPART', 'COURSE', 'FIN']
+
+let knex
+export async function list() {
+  const files = await fs.readdir(DIR)
+  return files.filter(name => name.endsWith('.db') && name !== 'current.db')
+}
+
+export async function open(filename) {
+  if (filename) {
+    await close()
+    await fs.symlink(filename, CURRENT_FILENAME)
   }
-})
+  if (!await exists(CURRENT_FILENAME)) return null
+  knex = Knex({
+    client: 'sqlite3',
+    connection: {
+      filename: CURRENT_FILENAME
+    },
+    useNullAsDefault: true,
+  })
+  await load()
+  emit('open')
+}
 
-const initDb = async () => {
+export async function create(name) {
+  if (await exists(CURRENT_FILENAME)) throw new Error('current file link already exists')
+  const filename = path.join(DIR, `${name.replace(/[^a-z0-9.()-]+/gi, '_')}.db`)
+  knex = Knex({
+    client: 'sqlite3',
+    connection: { filename },
+    useNullAsDefault: true,
+  })
+  await fs.symlink(filename, CURRENT_FILENAME)
+  await initDb()
+  await knex.insert({ name }).into('course')
+}
+
+export async function close() {
+  if (knex) await knex.destroy()
+  if (await exists(CURRENT_FILENAME)) await fs.rm(CURRENT_FILENAME)
+  knex = null
+  emit('close')
+}
+  
+export function getKnex() { return  knex }
+let status = STATUS[0]
+
+export async function initDb() {
   if (!await knex.schema.hasTable('equipes')) {
+    await knex.schema.createTable('course', (table) => {
+      table.string('name')
+      table.string('status').default(STATUS[0])
+    })
     await knex.schema.createTable('equipes', (table) => {
       table.integer('equipe')
       table.string('nom')
@@ -45,17 +97,20 @@ const initDb = async () => {
       table.integer('dossard').nullable()
       table.string('id')
       table.boolean('deleted')
+      table.boolean('vu').defaultTo(false)
+      table.integer('battery').nullable().defaultTo(null)
       table.foreign('dossard').references('dossard').inTable('equipiers')
       table.index(['dossard'])
       table.unique(['id'])
     })
     await knex.schema.createTable('tours', (table) => {
-      table.integer('id')
+      table.increments('id')
+      table.integer('numero')
       table.string('transpondeur')
       table.integer('dossard').nullable()
       table.integer('timestamp')
       table.string('source')
-      table.boolean('duplicate')
+      table.string('status').nullable().default(null) // null, deleted, duplicate, ignore
       table.boolean('deleted', false)
       table.unique(['id'])
       table.foreign('dossard').references('dossard').inTable('equipiers')
@@ -71,7 +126,7 @@ const initDb = async () => {
 
 const clear = object => { for (const key of Object.keys(object)) delete object[key] }
 
-const reset = async () => {
+export async function reset() {
   tours.length = 0
   clear(transpondeurs)
   clear(equipes)
@@ -84,7 +139,7 @@ const reset = async () => {
   await knex('equipes').delete()
 }
 
-const loadRows = async (klass, onRow) => {
+export async function loadRows(klass, onRow) {
   const rows = await knex.select('*').from(klass.table)
   for (const row of rows) {
     const instance = new klass(row)
@@ -93,7 +148,7 @@ const loadRows = async (klass, onRow) => {
   }
 }
 
-const load = async () => {
+export async function load() {
   await loadRows(Equipe, equipe => {
     categories.general.push(equipe)
     categories[equipe.categorie] = categories[equipe.categorie] || []
@@ -110,7 +165,6 @@ const load = async () => {
     const tour = new Tour(tourRow)
     tours.push(tour)
     if (!tour.dossard) continue
-    if (tour.deleted) continue
 
     const equipier = equipiers[tour.dossard]
     if (!equipier) {
@@ -118,7 +172,7 @@ const load = async () => {
         continue;
     }
     const equipe = equipes[equipier.equipe]
-    if (!tour.duplicate) {
+    if (tour.status !== 'duplicate') {
       equipier.tours += 1
       equipier.timestamp = tour.timestamp
       equipe.tours.push(tour)
@@ -136,32 +190,35 @@ const load = async () => {
   await notifyAndGetHasChanged(() => {})
 }
 
-const addTranspondeur = async (transpondeur) => {
+export async function addTranspondeur(transpondeur) {
   transpondeurs[transpondeur.id] = transpondeur
   await knex.insert(transpondeur).into('transpondeurs')
 }
 
-const removeTranspondeur = async (transpondeur) => {
+export async function removeTranspondeur(id) {
   delete transpondeurs[id]
   await knex('transpondeurs').where({ id }).delete()
 }
 
 
-const isDuplicate = (timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD) => {
+export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD) {
   const lastTimestamp = _.last(equipe.tours?.timestamp)
   if (lastTimestamp > COURSE_DUREE && timestamp >= lastTimestamp) return true
   return equipe.tours.some(tour => {
-    return tour.timestamp - offset < timestamp && timestamp < tour.timestamp + offset
+    return !tour.status && tour.timestamp - offset < timestamp && timestamp < tour.timestamp + offset
   })
 }
 
-const insertTour = async (tour) => {
+export async function insertTour(tour) {
     await knex.insert(_.omit(tour, ['duree'])).into('tours')
     tours.push(new Tour(tour))
 }
 
-const addTour = async (id, transpondeur, timestamp, source = 'chrono') => {
-  const tour = new Tour({ id, transpondeur, dossard: null, timestamp, source, duplicate: false })
+export async function addTour(id, transpondeur, timestamp, source = 'chrono') {
+  const tour = new Tour({ numero: id, transpondeur, dossard: null, timestamp, source, status: null })
+  if (status !== STATUS[2]) { // !course
+    tour.status = 'ignore'
+  }
   if (!(transpondeur in transpondeurs)) {
     await insertTour(tour)
     await addTranspondeur({ id: transpondeur, dossard: null, deleted: false })
@@ -179,11 +236,13 @@ const addTour = async (id, transpondeur, timestamp, source = 'chrono') => {
   }
 
   const equipe = equipes[equipier.equipe]
-  tour.duplicate = isDuplicate(timestamp, equipe);
+  if (!tour.status && isDuplicate(timestamp, equipe)) {
+    tour.status = 'duplicate'
+  };
 
   await insertTour(tour)
   
-  if (!tour.duplicate) {
+  if (!tour.status) {
     equipier.tours += 1
     equipier.timestamp = Math.max(equipier.timestamp, timestamp)
     if (_.last(equipe.tours)?.timestamp < timestamp) {
@@ -201,7 +260,7 @@ const addTour = async (id, transpondeur, timestamp, source = 'chrono') => {
     equipe._rank = rankValue(equipe)
 
     calculClassements(equipe)
-  } else {
+  } else if (tour.status === 'duplicate') {
     equipe.duplicate.push(tour)
   }
   return Promise.all([
@@ -256,7 +315,7 @@ const updateClassement = (equipe, categoriesToUpdate = ['general', equipe.catego
   }
 }
 
-const modifEquipe = async (id, values) => {
+export async function modifEquipe(id, values) {
   const equipe = equipes[id]
   if ('penalite' in values) {
     equipe.penalite = values.penalite
@@ -274,12 +333,14 @@ const modifEquipe = async (id, values) => {
   await notifyAndGetHasChanged(async equipe => emit('equipes', equipe))
 }
 
-const modifTour = async (id, deleted) => {
+export async function modifTour(id, deleted) {
   const tour = _.find(tours, t => t.id === id)
   if (!tour) return
-  if (tour.deleted === deleted) return
-  tour.deleted = deleted
-  await knex('tours').where({ id }).update({ deleted })
+  if (![null, 'duplicated', 'deleted'].includes(tour.status)) return
+  if (tour.status === 'deleted' && deleted) return
+  if ([null, 'duplicated'].includes(tour.status) && !deleted) return
+  tour.status = deleted ? 'deleted' : null
+  await knex('tours').where({ id }).update({ status: tour.status })
   const equipier = equipiers[tour.dossard]
   const equipe = equipes[equipier?.equipe]
   if (tour.dossard && equipier && equipe) {
@@ -294,19 +355,20 @@ const modifTour = async (id, deleted) => {
   ])[0]
 }
 
-const deplaceEquipier = async (dossard, numero) => {
+export async function deplaceEquipier(dossard, numero) {
 }
 
+// Async events
 const listeners = {
-  equipes: [],
-  tours: [],
-  transpondeur: [],
 }
-const addListener = (type, callback) => { listeners[type].push(callback) }
-const removeListener = (type, callback) => { _.pull(listeners[type], callback) }
-const emit = async (type, ...args) => Promise.all(listeners[type].map(callback => callback(...args)))
+export function on(type, callback) {
+  if (!listeners[type]) listeners[type] = []
+  listeners[type].push(callback)
+}
+export function removeListener(type, callback) { _.pull(listeners[type], callback) }
+const emit = async (type, ...args) => listeners[type] && Promise.all(listeners[type].map(callback => callback(...args)))
 
-const notifyAndGetHasChanged = async (callback) => {
+export async function notifyAndGetHasChanged(callback) {
   let changed = []
   await Promise.all(_.map(equipes, async equipe => {
     if (!equipe._has_changed) return
@@ -317,25 +379,38 @@ const notifyAndGetHasChanged = async (callback) => {
   return changed
 }
 
-module.exports = {
-  knex,
-  initDb,
-  reset,
-  load,
-  addTranspondeur,
-  removeTranspondeur,
-  addTour,
-  addListener,
-  removeListener,
-  equipes,
-  equipiers,
-  tours,
-  transpondeurs,
-  categories,
-  modifEquipe,
-  modifTour,
-  rankValue,
-  updateClassement,
-  DUPLICATE_WINDOW_PERIOD,
-  COURSE_DUREE,
+export function getLastTourNumero() {
+  const last = _.last(tours)
+  if (status === 'TEST' && last?.status === 'ignore')  return last?.numero
+  if (status !== 'TEST' && last?.status !== 'ignore')  return last?.numero
+  return null
+}
+
+export async function getCourseInfo() {
+  if (!knex) return
+  const info = (await knex.select('*').from('course'))[0]
+  status = info.status
+  return info
+}
+
+export async function startTest() {
+  await changeStatus(STATUS[0])
+}
+
+export async function stopTest() {
+  await changeStatus(STATUS[1])
+}
+
+export async function startCourse() {
+  await changeStatus(STATUS[2])
+}
+
+export async function stopCourse() {
+  await changeStatus(STATUS[3])
+}
+
+export async function changeStatus(_status) {
+  status = _status
+  await knex('course').update({ status });
+  emit('course', { status })
 }

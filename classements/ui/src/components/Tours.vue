@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex flex-column h-100">
+  <div class="d-flex flex-column h-100" style="max-height: 100vh;">
     <div class="d-flex flex-column">
       <b-container fluid>
         <b-row>
@@ -32,9 +32,9 @@
         </b-row>
       </b-container>
     </div>
-    <div class="d-flex flex-column flex-grow" style="overflow: scroll-y">
-      <ToursTable :tours="toursSelected" :fields="fields" :perPage="perPage" :currentPage="currentPage" />
-    </div>
+    <div class="d-flex flex-column flex-fill" style="overflow: scroll; position: relative;">
+      <ToursTable :tours="toursSelected" :fields="fields" :perPage="perPage" :currentPage="currentPage"/>
+      </div>
   </div>
 </template>
 
@@ -53,7 +53,7 @@ export default {
       currentPage: 1,
       fields: [
         {
-          key: 'id',
+          key: 'numero',
           sortable: true
         },
         {
@@ -104,12 +104,18 @@ export default {
     }
   },
   computed: {
-    toursAll() { return this.$store.state.tours },
-    toursNormaux() { return this.$store.state.tours.filter(t => t.dossard && !t.duplicate && !t.deleted) },
-    toursDuplicate() { return this.$store.state.tours.filter(t => t.duplicate) },
-    toursDeleted() { return this.$store.state.tours.filter(t => t.deleted) },
+    toursAll() {
+      if (this.$store.state.course.status === 'TEST') {
+        return this.$store.state.tours.filter(t => t.status === 'ignore')
+      } else {
+        return this.$store.state.tours.filter(t => t.status !== 'ignore')
+      }
+    },
+    toursNormaux() { return this.toursAll.filter(t => t.dossard && !t.status) },
+    toursDuplicate() { return this.toursAll.filter(t => t.status === 'duplicate') },
+    toursDeleted() { return this.toursAll.filter(t => t.status === 'deleted') },
     toursUnknown() {
-        return this.$store.state.tours.filter(t => !t.dossard)
+        return this.toursAll.filter(t => !t.dossard)
     },
     toursSelected() {
       const words = this.search.toLowerCase().split(' ').filter(v => v)

@@ -2,15 +2,11 @@
 
 const path = require('path')
 const AutoLoad = require('@fastify/autoload')
-const { initDb, load } = require('./models')
-
-// Pass --options via CLI arguments in command to enable these options.
-module.exports.options = {}
+const Static = require('@fastify/static')
+const { open, addTour } = require('./models')
+const { connect, on } = require('./tours')
 
 module.exports = async function (fastify, opts) {
-  // Place here your custom code!
-  await initDb()
-  await load().catch(console.error)
   fastify.register(require('fastify-file-upload'))
   fastify.register(require('@fastify/websocket'))
   await fastify.register(require( '@fastify/cors'), {
@@ -33,4 +29,16 @@ module.exports = async function (fastify, opts) {
     dir: path.join(__dirname, 'routes'),
     options: Object.assign({}, opts)
   })
+
+  fastify.register(Static, {
+    root: path.join(__dirname, 'ui/dist'),
+  })
+
+  // get status
+  await open()
+  // open db
+  // connect to chrono
+  await connect()
+  on('tour', data => console.log('trou', data))
+  on('tour', data => addTour(data.id, data.transpondeur, data.timestamp))
 }

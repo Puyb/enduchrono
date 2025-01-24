@@ -20,6 +20,7 @@
     "@fastify/formbody": "^7.4.0",
     "@fastify/multipart": "^7.6.0",
     "@fastify/sensible": "^5.0.0",
+    "@fastify/static": "^7.0.4",
     "@fastify/websocket": "^8.1.0",
     "csv": "^6.3.0",
     "fastify": "^4.0.0",
@@ -28,7 +29,8 @@
     "fastify-plugin": "^4.0.0",
     "knex": "^2.4.2",
     "lodash": "^4.17.21",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",

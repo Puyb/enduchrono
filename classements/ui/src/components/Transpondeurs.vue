@@ -11,6 +11,7 @@
         <b-button :variant="selection=='transpondeursAll' ? 'info' : ''" @click="selection = 'transpondeursAll'">Tous <b-badge pill>{{ transpondeursAll.length }}</b-badge></b-button>
         <b-button :variant="selection=='transpondeursActive' ? 'info' : ''" @click="selection = 'transpondeursActive'">Actifs <b-badge pill>{{ transpondeursActive.length }}</b-badge></b-button>
         <b-button :variant="selection=='transpondeursInactive' ? 'info' : ''" @click="selection = 'transpondeursInactive'">Inactifs <b-badge pill>{{ transpondeursInactive.length }}</b-badge></b-button>
+        <b-button :variant="selection=='transpondeursNeverSeen' ? 'info' : ''" @click="selection = 'transpondeursNeverSeen'">Sans passage course <b-badge pill>{{ transpondeursNeverSeenCourse.length }}</b-badge></b-button>
         <b-button :variant="selection=='transpondeursNeverSeen' ? 'info' : ''" @click="selection = 'transpondeursNeverSeen'">Sans passage <b-badge pill>{{ transpondeursNeverSeen.length }}</b-badge></b-button>
         <b-button :variant="selection=='transpondeursUnknown' ? 'info' : ''" @click="selection = 'transpondeursUnknown'">Inconnus <b-badge pill>{{ transpondeursUnknown.length }}</b-badge></b-button>
       </b-button-group>
@@ -98,6 +99,7 @@ export default {
     transpondeursAll() { return this.$store.state.transpondeurs },
     transpondeursActive() { return this.$store.state.transpondeurs.filter(t => t.dossard && !t.deleted) },
     transpondeursInactive() { return this.$store.state.transpondeurs.filter(t => t.deleted) },
+    transpondeursNeverSeenCourse() { return this.$store.state.transpondeurs.filter(t => !this.tours(t).filter(tr => tr.status !== 'ignore').length) },
     transpondeursNeverSeen() { return this.$store.state.transpondeurs.filter(t => !this.tours(t).length) },
     transpondeursUnknown() { return this.$store.state.transpondeurs.filter(t => !t.dossard) },
     transpondeursSelected() {

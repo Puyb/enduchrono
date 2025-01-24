@@ -1,11 +1,13 @@
 'use strict'
-const { knex, reset, load } = require('../models')
-const { parse } = require('csv-parse/sync')
+import * as models from '../models.js'
+import { parse } from 'csv-parse/sync'
+import { start, stop } from '../tours.js'
 
-module.exports = async function (fastify, opts) {
+export default async function route(fastify, opts) {
   fastify.post('/import', async function (request, reply) {
-    const response = {}
-    await reset()
+    const { name } = request.body
+    await models.create(name)
+    const knex = models.getKnex()
     await knex.transaction(async transaction => {
       for (const object of ['equipes', 'equipiers', 'transpondeurs']) {
         if (request.raw.files[object]) {
@@ -16,12 +18,44 @@ module.exports = async function (fastify, opts) {
           for (const row of rows) {
             await transaction.insert(row).into(object)
           }
-          response[object] = rows.length
         }
       }
     })
-    await load()
+    await models.load()
+    await models.startTest()
 
-    return response
+    reply.redirect(request.headers.referer)
+  })
+
+  fastify.post('/test/start', async function(request, reply) {
+    await start()
+    await models.startTest()
+    return {}
+  })
+
+  fastify.post('/test/stop', async function(request, reply) {
+    await stop()
+    await models.stopTest()
+    return {}
+  })
+
+  fastify.post('/course/start', async function(request, reply) {
+    await start()
+    await models.startCourse()
+    return {}
+  })
+
+  fastify.post('/course/stop', async function(request, reply) {
+    await stop()
+    await models.stopCourse()
+    return {}
+  })
+
+  fastify.post('/course/close', async function(request, reply) {
+    await models.close()
+  })
+
+  fastify.post('/course/open', async function(request, reply) {
+    await models.open(request.body.filename)
   })
 }
