@@ -2,8 +2,7 @@
 const dgram = require('node:dgram')
 const EventEmitter = require('node:events')
 
-const BIND_ADDRESS = '192.168.45.100'
-const ADDRESS = '192.168.45.101'
+const {CHRONO_ADDRESS, SIMULATOR_ADDRESS } = process.env;
 const PORT = 2008
 const START = Buffer.from('1b07', 'hex')
 const STOP = Buffer.from('1b135c', 'hex')
@@ -47,7 +46,7 @@ socket.on('listening', async () => {
 const send = async message => {
   return new Promise((resolve, reject) => {
     console.log(`sending ${message.toString('hex')}`)
-    socket.send(message, 0, message.length, PORT, ADDRESS, function (err, bytes) {
+    socket.send(message, 0, message.length, PORT, SIMULATOR_ADDRESS, function (err, bytes) {
       if (err) return reject(err)
       resolve(bytes)
     })
@@ -103,7 +102,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       socket.once('error', reject)
       socket.once('listening', resolve)
-      socket.bind(PORT, BIND_ADDRESS)
+      socket.bind(PORT, CHRONO_ADDRESS)
     })
   },
   send,

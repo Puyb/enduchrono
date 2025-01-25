@@ -60,3 +60,4 @@ profile*
 *.db
 *.csv
 
+.env

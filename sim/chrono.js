@@ -2,8 +2,8 @@
 import dgram from 'node:dgram'
 import EventEmitter from 'node:events'
 
-const BIND_ADDRESS = '192.168.45.101'
-const ADDRESS = '192.168.45.100'
+const SIMULATOR_ADDRESS = '192.168.0.43'
+const CHRONO_ADDRESS = '127.0.0.1'
 const PORT = 2008
 const START = '1b07'
 const STOP = '1b135c'
@@ -52,7 +52,7 @@ socket.on('message', async (message, { address }) => {
             timestamp += TIMESTAMP_INTERVAL * timeMultiplier
             while(tourTimestamp(toursToSend[0]) <= timestamp) {
               if (tours.push(toursToSend[0]) === 1) {
-                send(ADDRESS, tours[0])
+                send(CHRONO_ADDRESS, tours[0])
                 toursSent++
               }
               toursToSend.shift()
@@ -60,28 +60,28 @@ socket.on('message', async (message, { address }) => {
             event.emit('timestamp', timestamp)
           }, TIMESTAMP_INTERVAL)
         }
-        await send(ADDRESS, ACK)
+        await send(CHRONO_ADDRESS, ACK)
         break;
       case STOP:
         event.emit('stop')
         clearInterval(timestampTimer)
         timestampTimer = null
-        await send(ADDRESS, ACK)
+        await send(CHRONO_ADDRESS, ACK)
         break;
       case STATUS:
-        await send(ADDRESS, JSON.stringify({
+        await send(CHRONO_ADDRESS, JSON.stringify({
           status,
           timestamp,
           pending: tours.length,
         }))
         break;
       case REPEAT:
-        if (tours.length) await send(ADDRESS, tours[0])
+        if (tours.length) await send(CHRONO_ADDRESS, tours[0])
         break;
       case ACK:
         tours.shift()
         if (tours.length) {
-          await send(ADDRESS, tours[0])
+          await send(CHRONO_ADDRESS, tours[0])
           toursSent++
         }
         break
@@ -116,7 +116,7 @@ export async function init() {
   return new Promise((resolve, reject) => {
     socket.once('error', reject)
     socket.once('listening', resolve)
-    socket.bind(PORT, BIND_ADDRESS)
+    socket.bind(PORT, SIMULATOR_ADDRESS)
   })
 }
 
