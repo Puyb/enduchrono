@@ -1,4 +1,5 @@
 'use strict'
+import 'dotenv/config'
 import Fastify from 'fastify'
 import chrono from './chrono.js'
 import model from './model.js'

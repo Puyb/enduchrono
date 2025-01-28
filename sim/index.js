@@ -1,8 +1,7 @@
 'use strict'
+import 'dotenv/config'
 import Fastify from 'fastify'
 import FastifyWebsocket from '@fastify/websocket'
-import Static from '@fastify/static'
-import path from 'path'
 import * as chrono from './chrono.js'
 import * as fastifyCors from '@fastify/cors'
 
