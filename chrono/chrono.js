@@ -21,13 +21,14 @@ const event = new EventEmitter()
 socket.on('message', async (message, rinfo) => {
   try {
     console.log(`server got: ${message.toString()} from ${rinfo.address}:${rinfo.port}`)
-    if (pendingCommand) return pendingCommand(message)
     const match = message.toString().match(TRANSPONDEUR_REGEXP)
-    if (!match) return
-    const [, transpondeur, hour, minute, second, milli] = match
-    await send(ACK)
-    const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
-    event.emit('passage', { transpondeur, timestamp })
+    if (match) {
+      const [, transpondeur, hour, minute, second, milli] = match
+      await send(ACK)
+      const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
+      event.emit('passage', { transpondeur, timestamp })
+    }
+    if (pendingCommand) return pendingCommand(message)
   } catch (err) {
     console.error(err)
   }
@@ -70,7 +71,7 @@ const command = async (message) => {
   })
 }
 
-const status = async () => {
+const getStatus = async () => {
   try {
     const message = await command(STATUS)
     // decode status
@@ -83,16 +84,17 @@ const status = async () => {
 }
 
 const repeat = async () => {
-  await command(REPEAT)
+  await send(REPEAT)
 }
 
 let lastConnected = false
 const check = async () => {
-  const { connected, pending, timestamp } = await status()
-  if (connected !== lastConnected) event.emit('status', { status: { connected } })
+  const { status, connected, pending, timestamp } = await getStatus()
+  if (connected !== lastConnected) event.emit('connection', { connected })
   lastConnected = connected
-  if (timestamp) event.emit('status', { status: { timestamp } })
+  event.emit('status', { status: { timestamp, pending, status } })
   if (pending) await repeat()
+  return status
 }
 
 module.exports = {
@@ -109,7 +111,8 @@ module.exports = {
   command,
   async start() { return command(START) },
   async stop() { return command(STOP) },
-  status,
+  getStatus,
   repeat,
   check,
+  getConnected() { return lastConnected },
 }

@@ -8,12 +8,14 @@ export default new Vuex.Store({
     URL: '',
     time: 0,
     error: null,
+    errorMessage: null,
     course: {},
     tours: [],
     equipes: {},
     equipiers: {},
     transpondeurs: [],
     filenames: [],
+    pending: 0,
   },
   mutations: {
     setStatus(state, status) {

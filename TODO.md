@@ -17,6 +17,10 @@ ui
 - ajout tour
 - ajout transpondeur
 - stats
+    graph nbpassages/min
+    temps depuis dernier passage
+    SNR / batt
 - don't allow to close the error window
 - add error message
 - sync time
+- duree tours apres reload dans page equipers

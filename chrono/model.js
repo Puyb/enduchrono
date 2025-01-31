@@ -60,5 +60,6 @@ module.exports = {
   getPassages,
   createDb,
   closeDb,
+  async isOpened() { return exists(CURRENT_FILENAME) }
 }
 

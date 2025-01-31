@@ -172,13 +172,11 @@ export async function load() {
         continue;
     }
     const equipe = equipes[equipier.equipe]
-    if (tour.status !== 'duplicate') {
+    if (!tour.status) {
       equipier.tours += 1
       equipier.timestamp = tour.timestamp
       equipe.tours.push(tour)
       equipe.temps = tour.timestamp
-    } else {
-      equipe.duplicate.push(tour)
     }
   }
   for (const equipe of Object.values(equipes)) {
@@ -210,8 +208,9 @@ export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD)
 }
 
 export async function insertTour(tour) {
-    await knex.insert(_.omit(tour, ['duree'])).into('tours')
-    tours.push(new Tour(tour))
+    const [id] = await knex.insert(_.omit(tour, ['duree'])).into('tours')
+    tour.id = id
+    tours.push(tour)
 }
 
 export async function addTour(id, transpondeur, timestamp, source = 'chrono') {
@@ -260,8 +259,6 @@ export async function addTour(id, transpondeur, timestamp, source = 'chrono') {
     equipe._rank = rankValue(equipe)
 
     calculClassements(equipe)
-  } else if (tour.status === 'duplicate') {
-    equipe.duplicate.push(tour)
   }
   return Promise.all([
     notifyAndGetHasChanged(async equipe => emit('equipes', equipe)),
@@ -272,7 +269,7 @@ export async function addTour(id, transpondeur, timestamp, source = 'chrono') {
 const rankValue = equipe => -(equipe.tours.length + equipe.penalite) * 100 * 3600 * 1000 + (equipe.temps || 0)
 
 const calculClassementCategory = categorie => {
-  categories[categorie].sort((a, b) => a._rank - b._rank)
+  categories[categorie].sort((a, b) => (a._rank || 0) - (b._rank || 0))
   const key = categorie === 'general' ? 'position_general' : 'position_categorie'
   for (const [position, equipe] of categories[categorie].entries()) {
     if (!equipe.tours.length) continue
@@ -413,4 +410,18 @@ export async function changeStatus(_status) {
   status = _status
   await knex('course').update({ status });
   emit('course', { status })
+}
+
+export async function syncStatus(chronoStatus) {
+  const index = STATUS.indexOf(status)
+  if (chronoStatus === 'start') {
+    if (index !== 1) return // si avant départ, retour en test
+    await changeStatus(STATUS[0])
+    return
+  }
+  if (chronoStatus === 'stop') {
+    if (index % 2 === 1) return // si test -> avant départ
+    await changeStatus(STATUS[index + 1]) // si course -> fin
+    return
+  }
 }

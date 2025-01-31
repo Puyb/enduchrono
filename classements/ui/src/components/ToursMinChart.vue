@@ -14,7 +14,7 @@
 
 <script>
 import { Line as LineChartGenerator } from 'vue-chartjs/legacy'
-import { formatDuree } from '../utils'
+import * as _ from 'lodash'
 
 import {
   Chart as ChartJS,
@@ -38,12 +38,12 @@ ChartJS.register(
 )
 
 export default {
-  name: 'LineChart',
+  name: 'ToursMinChart',
   components: {
     LineChartGenerator
   },
   props: {
-    equipiers: { type: Array, default: () => [] },
+    toursMin: { type: Object, default: () => {} },
     chartId: {
       type: String,
       default: 'line-chart'
@@ -83,45 +83,20 @@ export default {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: {
-          y: {
-            ticks: {
-                callback(value) { return formatDuree(value).split('.')[0]; },
-            }
-          }
-        },
         animation: false,
       }
     }
   },
   computed: {
     chartData() {
-      const style = getComputedStyle(document.body);
-      const theme = {
-        primary: style.getPropertyValue('--primary'),
-        secondary: style.getPropertyValue('--secondary'),
-        success: style.getPropertyValue('--success'),
-        info: style.getPropertyValue('--info'),
-        warning: style.getPropertyValue('--warning'),
-        danger: style.getPropertyValue('--danger'),
-        light: style.getPropertyValue('--light'),
-        dark: style.getPropertyValue('--dark'),
-      };
-      const colors = this.colors?.map(color => (theme[color] || color)) || ['#0000aa', '#00aa00', '#aa0000', '#00aaaa', '#aa00aa']
-      const labels = []
-      const datasets = this.equipiers.map((equipier, index) => {
-        return {
-          label: `${equipier.dossard} ${equipier.nom} ${equipier.prenom}`,
-          borderColor: colors[index],
-          backgroundColor: colors[index],
-          data: this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard).map((tour, index2) => {
-            if (labels.length <= index2) labels.push(index2)
-            return tour.duree
-          }).reverse(),
+      const labels = _.keys(this.toursMin).map(value => `${Math.floor(value / 1000 / 60)}:${String(Math.floor((value / 1000) % 60)).padStart(2, '0')}`)
+      const datasets = [
+        {
+          label: 'Tours/min',
+          data: _.values(this.toursMin),
+          lineTension: 0.8,
         }
-      })
-
-      console.log('datasets', datasets, labels)
+      ]
       return { datasets, labels }
     },
   },

@@ -11,8 +11,9 @@
             <b-nav-item :active="$route.name === 'tours'" to="/tours">Tours</b-nav-item>
             <b-nav-item :active="['equipe', 'equipes', 'categories'].includes($route.name)" to="/equipes">Équipes / Classements</b-nav-item>
             <b-nav-item :active="$route.name === 'transpondeurs'" to="/transpondeurs">Transpondeurs</b-nav-item>
+            <b-nav-item :active="$route.name === 'stats'" to="/stats">Stats</b-nav-item>
           </b-navbar-nav>
-          <b-navbar-nav class="ml-auto">
+          <b-navbar-nav class="ml-auto" id="status">
             <b-nav-text v-if="$store.state.course.status === 'TEST'">Test avant course</b-nav-text>
             <b-nav-text v-if="$store.state.course.status === 'DEPART'">Attente départ</b-nav-text>
             <b-nav-text v-if="$store.state.course.status === 'COURSE'">{{ $store.state.tours.length }} tour{{ $store.state.tours.length > 1 ? 's' : '' }} - {{ formatTime($store.state.time) }} </b-nav-text>
@@ -51,7 +52,7 @@
       <h1>Ouvrir une course</h1>
       <b-button @click="openCourse(filename)" v-for="filename of $store.state.filenames" :key="filename">{{filename}}</b-button>
     </div>
-    <b-modal v-model="showError" hide-footer>
+    <b-modal v-model="showError" hide-footer hide-header>
       Error {{ $store.state.error }}
       <b-row>
         <b-col class="col-3">
@@ -79,6 +80,11 @@
           <b-icon-laptop font-scale=6 />
           <h5>Web interface</h5>
         </b-col>
+      </b-row>
+        <b-col class="col-12">
+          <pre>{{ $store.state.errorMessage }}</pre>
+        </b-col>
+      <b-row>
       </b-row>
     </b-modal>
     <b-modal v-model="showDepart" title="Départ" @ok="startCourse" @cancel="startTest" ok-title="Départ" cancel-title="Mode test">
@@ -132,5 +138,11 @@ export default {
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+#status .navbar-text {
+  font-weight: bold;
+  font-size: 2em;
+  color: #fff;
+  margin: -0.5em 10px;
 }
 </style>

@@ -23,6 +23,7 @@ import Tours from './components/Tours.vue'
 import Transpondeurs from './components/Transpondeurs.vue'
 import Equipes from './components/Equipes.vue'
 import Equipe from './components/Equipe.vue'
+import Stats from './components/Stats.vue'
 import store from './store'
 
 const router = new VueRouter({
@@ -32,7 +33,8 @@ const router = new VueRouter({
     { name: 'transpondeurs', path: '/transpondeurs', component: Transpondeurs },
     { name: 'equipes', path: '/equipes', component: Equipes },
     { name: 'categories', path: '/equipes/:currentCategorie', component: Equipes, props: true },
-    { name: 'equipe', path: '/equipe/:numero', component: Equipe, props: true }
+    { name: 'equipe', path: '/equipe/:numero', component: Equipe, props: true },
+    { name: 'stats', path: '/stats', component: Stats },
   ],
 })
 new Vue({
@@ -65,10 +67,10 @@ new Vue({
       const connection = new WebSocket(`${this.URL.replace(/^http/, 'ws')}/websockets/control`)
       connection.onmessage = (message) => {
         const data = JSON.parse(message.data)
-        console.log('data', data, data.equipe?.equipe)
+        if (data.event !== 'status') console.log('data', data)
         if (data.event === 'init') {
           this.$store.state.course = data.course
-          this.$store.state.tours = data.tours
+          this.$store.state.tours = data.tours.reverse()
           this.$store.state.equipes = data.equipes
           this.$store.state.equipiers = data.equipiers
           this.$store.state.categories = data.categories
@@ -93,11 +95,17 @@ new Vue({
         if (data.event === 'course') {
           this.$store.commit('setStatus', data.course.status)
         }
+        if (data.event === 'connection') {
+          if (data.connection.connected) this.$store.state.error = null
+          if (!data.connection.connected) this.$store.state.error = 'chrono'
+          this.$store.state.errorMessage = data.connection.error
+        }
         if (data.event === 'status') {
-          if (data.status.connected) this.$store.state.error = null
-          if (!data.status.connected) this.$store.state.error = 'chrono'
           if (data.status.chrono_connected === false) this.$store.state.error = 'chronelec'
           if (data.status.chrono_connected === true) this.$store.state.error = null
+          if (data.status.pending) this.$store.state.pending = data.status.pending
+          if (data.status.timestamp) startDate = Date.now() - data.status.timestamp
+          this.$store.state.errorMessage = data.connection.error
         }
       }
       connection.onclose = (e) => {

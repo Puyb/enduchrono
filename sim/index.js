@@ -23,6 +23,12 @@ let send
 fastify.register(async function(fastify) {
   fastify.get('/ws', { websocket: true }, async (websocket, req) => {
     console.log('ws connected')
+    const listen = (obj, event, cb) => {
+      obj.on(event, cb)
+      websocket.on('close', () => {
+        obj.removeListener(event, cb)
+      })
+    }
     send = async data => {
       try {
         console.log('sending to websocket', JSON.stringify(data))
@@ -32,27 +38,19 @@ fastify.register(async function(fastify) {
       }
     }
 
-    websocket.on('message', message => {
-    })
-    chrono.on('timestamp', timestamp => send({ timestamp, timeString: chrono.getStatus() === 'start' ? chrono.getTimeString() : chrono.getStatus() }))
-
     const exit = async () => {
       console.log('exiting')
       await websocket.close()
       process.exit()
     }
-    process.on('SIGINT', exit)
-    process.on('SIGTERM', exit)
+    listen(process, 'SIGINT', exit)
+    listen(process, 'SIGTERM', exit)
 
-    websocket.on('close', () => {
-      process.removeListener('SIGINT', exit)
-      process.removeListener('SIGTERM', exit)
-    })
     websocket.on('open', () => send(chrono.getInfo()))
 
-    chrono.on('timestamp', timestamp => send(chrono.getInfo()))
-    chrono.on('received', received => { send({ received }) })
-    chrono.on('sent', sent => { send({ sent }) })
+    listen(chrono, 'timestamp', timestamp => send(chrono.getInfo()))
+    listen(chrono, 'received', received => send({ received }))
+    listen(chrono, 'sent', sent => send({ sent }))
   })
 
   fastify.post('/tours/add', async (req, res) => {
@@ -67,6 +65,12 @@ fastify.register(async function(fastify) {
   fastify.post('/time/multiplier', async (req, res) => {
     chrono.setTimeMultiplier(parseInt(req.body.multiplier))
     return {}
+  })
+  fastify.post('/connect', async (req, res) => {
+    chrono.setConnected(true)
+  })
+  fastify.post('/disconnect', async (req, res) => {
+    chrono.setConnected(false)
   })
 })
 

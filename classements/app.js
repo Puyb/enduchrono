@@ -3,7 +3,7 @@
 const path = require('path')
 const AutoLoad = require('@fastify/autoload')
 const Static = require('@fastify/static')
-const { open, addTour } = require('./models')
+const { open, addTour, syncStatus } = require('./models')
 const { connect, on } = require('./tours')
 
 module.exports = async function (fastify, opts) {
@@ -41,4 +41,5 @@ module.exports = async function (fastify, opts) {
   await connect()
   on('tour', data => console.log('trou', data))
   on('tour', data => addTour(data.id, data.transpondeur, data.timestamp))
+  on('status', ({ status }) => syncStatus(status)) 
 }

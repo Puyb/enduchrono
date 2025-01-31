@@ -25,6 +25,12 @@ new Vue({
         console.log('data', data, data.equipe?.equipe)
         if (data.timeString) Object.assign(this.$store.state, data)
       }
+      connection.onclose = (e) => {
+        console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+        setTimeout(function() {
+          connect();
+        }, 1000);
+      };
     }
     connect()
   }

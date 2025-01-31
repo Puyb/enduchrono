@@ -18,7 +18,6 @@ class Equipe extends Base{
   constructor(row) {
     super(row)
     this.tours = []
-    this.duplicate = []
     this._has_changed = false
     addMonitoredValue(this, 'position_general')
     addMonitoredValue(this, 'position_categorie')

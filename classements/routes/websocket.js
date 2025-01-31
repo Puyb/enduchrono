@@ -5,33 +5,39 @@ import * as chrono from '../tours.js'
 import _ from 'lodash'
 
 export default async function route(fastify, opts) {
-  fastify.get('/websockets/control', { websocket: true }, async (connection, req) => {
+  fastify.get('/websockets/control', { websocket: true }, async ({ socket }, req) => {
     const listen = (obj, event, cb) => {
       obj.on(event, cb)
-      connection.socket.on('close', () => {
+      socket.on('close', () => {
         obj.removeListener(event, cb)
       })
     }
+    const send = async data => {
+      try {
+        console.log('sending to websocket', JSON.stringify(data))
+        await socket.send(JSON.stringify(data))
+      } catch (err) {
+        console.error('error in send passage', err)
+      }
+    }
     const sendInit = async () => {
       const course = await getCourseInfo()
-      await connection.socket.send(JSON.stringify({
+      await send({
         event: 'init',
         course,
         categories: _.without(Object.keys(categories), 'general'),
-        tours: [...tours].reverse(),
+        tours,
         equipes: _.mapValues(equipes, equipe => ({ ...equipe, tours: equipe.tours.length })),
         equipiers,
         transpondeurs: _.values(transpondeurs),
         filenames: await models.list(),
-      }))
+      })
     }
     sendInit()
     listen(models, 'close', sendInit)
     listen(models, 'open', sendInit)
 
-    listen(models, 'course', async (course) => {
-      await connection.socket.send(JSON.stringify({ event: 'course', course }))
-    })
+    listen(models, 'course', async (course) => send({ event: 'course', course }))
 
     const toursQueue = []
     const equipesQueue = {}
@@ -48,18 +54,19 @@ export default async function route(fastify, opts) {
       transpondeursQueue[transpondeur.id] = { event: 'transpondeur', transpondeur }
       sendUpdates()
     })
-    listen(chrono, 'status', status => { connection.socket.send(JSON.stringify({ event: 'status', status })) })
+    listen(chrono, 'status', status => send({ event: 'status', status }))
+    listen(chrono, 'connection', connection => send({ event: 'connection', connection }))
 
     const sendUpdates = _.throttle(async () => {
       const events = [...toursQueue, ...Object.values(equipesQueue), ...Object.values(transpondeursQueue) ]
       emptyQueues()
-      await connection.socket.send(JSON.stringify({ event: 'update', events }))
+      await send({ event: 'update', events })
     }, 200)
 
     const emptyQueues = () => {
       toursQueue.length = 0
       for (const key in equipesQueue) delete equipesQueue[key]
     }
-    connection.socket.on('close', emptyQueues)
+    socket.on('close', emptyQueues)
   })
 }

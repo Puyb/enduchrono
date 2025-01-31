@@ -14,7 +14,7 @@ export function connect() {
   ws.on('error', err => {
     console.error('chrono websocket error', err)
     connected = false
-    event.emit('status', { connected, error: err.stack })
+    event.emit('connection', { connected, error: err.stack })
     try {
       ws.close();
     } catch(err) { console.log('error closing websocket', err) }
@@ -23,7 +23,7 @@ export function connect() {
     console.error('chrono websocket close')
     if (connected) {
       connected = false
-      event.emit('status', { connected, error: err.stack })
+      event.emit('connection', { connected, error: err.stack })
     }
     setTimeout(() => connect(), 1000)
   })
@@ -31,7 +31,7 @@ export function connect() {
   ws.on('open', function open() {
     console.log('chrono connected')
     connected = true
-    event.emit('status', { connected })
+    event.emit('connection', { connected })
   })
 
   ws.on('message', function message(str) {
@@ -39,8 +39,10 @@ export function connect() {
     console.log('received: %s', data)
     if (data.passage) event.emit('tour', data.passage)
     if (data.status) {
-      if ('connected' in data.status) event.emit('status', { chrono_connected: data.status.connected })
-      if ('timestamp' in data.status) event.emit('timestamp', { timestamp: data.status })
+      event.emit('status', data.status)
+    }
+    if ('connected' in data) {
+      event.emit('status', { chrono_connected: data.connected })
     }
   })
 }

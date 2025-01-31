@@ -27,6 +27,7 @@ const socket = dgram.createSocket('udp4')
 
 const event = new EventEmitter()
 export function on(name, cb) { event.on(name, cb) }
+export function removeListener(name, cb) { event.removeListener(name, cb) }
 
 const tourTimestamp = str => {
     const match = String(str).match(TRANSPONDEUR_REGEXP)

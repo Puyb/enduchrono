@@ -7,6 +7,7 @@
 
       <b-collapse id="nav-collapse" is-nav>
         <b-navbar-nav class="ml-auto">
+          <b-form-checkbox size="lg" v-model="connected" @change="connect()">Connecté</b-form-checkbox>
           <b-nav-text>Temps: {{ $store.state.timeString }}</b-nav-text>
           <b-form-select v-model="speed" :options="speedOptions" @change="setMultiplier(speed)"></b-form-select>
         </b-navbar-nav>
@@ -53,6 +54,7 @@ export default {
       speed: 1,
       speedOptions: [0, 1, 2, 4, 8, 16, 32].map(value => ({ value, text: value ? `${value}x` :  'Pause' })),
       transpondeurs: ['115234', '115327', '115330'],
+      connected: true,
     }
   },
   computed: {
@@ -71,7 +73,15 @@ export default {
     async sendFile(file) { 
       console.log('sendFile', file)
       await fetch(`${this.$store.state.URL}/tours/add`, { method: 'POST', body: file, headers: { 'content-type': 'text/plain' } })
+    },
+    async connect() {
+      if (this.connected) {
+        await fetch(`${this.$store.state.URL}/connect`, { method: 'POST' })
+      } else {
+        await fetch(`${this.$store.state.URL}/disconnect`, { method: 'POST' })
+      }
     }
+
   },
 }
 </script>

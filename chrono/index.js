@@ -63,6 +63,9 @@ fastify.register(async function(fastify) {
 
     event.on('passage', send)
     chrono.on('status', send)
+    chrono.on('connection', send)
+    
+    await send({ connected: chrono.getConnected() })
     
     socket.on('message', message => {
     })
@@ -85,11 +88,20 @@ fastify.register(async function(fastify) {
 
 try {
   await chrono.init()
+  const opened = await model.isOpened()
+  let first = true
   // setup status check interval
   setInterval(async () => {
     try {
       // FIXME
-      await chrono.check()
+      const status = await chrono.check()
+      if (status && first) {
+        first = false
+        if (status === 'stop' && opened) {
+          console.log('found an open file but chrono is stoped, closing the file')
+          await model.closeDb()
+        }
+      }
     } catch (err) {
       console.error(err)
     }

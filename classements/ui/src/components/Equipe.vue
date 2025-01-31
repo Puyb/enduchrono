@@ -30,7 +30,9 @@
         <ToursTable :tours="tours" :fields="toursFields" :tbody-tr-class="rowClass" />
       </b-tab>
       <b-tab title="Graph">
-        <EquipierChart :equipiers="equipiers" :colors="equipierColors"></EquipierChart>
+        <b-aspect aspect="3:1">
+          <EquipierChart :equipiers="equipiers" :colors="equipierColors"></EquipierChart>
+        </b-aspect>
       </b-tab>
     </b-tabs>
   </div>
@@ -67,7 +69,7 @@ export default {
           sortable: true
         },
         {
-          key: 'numero',
+          key: 'numeroParEquipe',
           sortable: true
         },
         {
