@@ -43,8 +43,8 @@ socket.on('message', async (message, { address }) => {
     event.emit('received', str)
     switch(str) {
       case START:
-        event.emit('start')
         status = 'start'
+        event.emit('start')
         toursSent = 0
         if (!timestampTimer) {
           timestamp = 0
@@ -63,6 +63,7 @@ socket.on('message', async (message, { address }) => {
         await send(CHRONO_ADDRESS, ACK)
         break;
       case STOP:
+        status = 'stop'
         event.emit('stop')
         clearInterval(timestampTimer)
         timestampTimer = null

@@ -13,16 +13,6 @@ module.exports = async function (fastify, opts) {
     origin: '*',
   })
 
-  // Do not touch the following lines
-
-  // This loads all plugins defined in plugins
-  // those should be support plugins that are reused
-  // through your application
-  fastify.register(AutoLoad, {
-    dir: path.join(__dirname, 'plugins'),
-    options: Object.assign({}, opts)
-  })
-
   // This loads all plugins defined in routes
   // define your routes in one of these
   fastify.register(AutoLoad, {
@@ -31,7 +21,7 @@ module.exports = async function (fastify, opts) {
   })
 
   fastify.register(Static, {
-    root: path.join(__dirname, 'ui/dist'),
+    root: path.join(__dirname, 'ui'),
   })
 
   // get status

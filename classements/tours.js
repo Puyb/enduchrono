@@ -3,13 +3,14 @@ import { getLastTourNumero } from './models.js'
 import WebSocket from 'ws';
 import Event from 'node:events'
 
-const BASE_URL = 'localhost:3001'
+const BASE_URL = `${process.env.CHRONO_HOST || 'localhost'}:3001`
 
 let ws
 let connected = false
 const event = new Event()
 export function connect() {
-  ws = new WebSocket(`ws://${BASE_URL}/tours?from=${getLastTourNumero() || 0}`, {})
+  const wsUrl = `ws://${BASE_URL}/tours?from=${getLastTourNumero() || 0}`
+  ws = new WebSocket(wsUrl, {})
 
   ws.on('error', err => {
     console.error('chrono websocket error', err)

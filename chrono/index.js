@@ -106,7 +106,7 @@ try {
       console.error(err)
     }
   }, 1000)
-  await fastify.listen({ port: 3001 })
+  await fastify.listen({ host: '0.0.0.0', port: 3001 })
 } catch (err) {
   console.error(err)
   process.exit(1)

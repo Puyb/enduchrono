@@ -1,0 +1,27 @@
+version: '3'
+services:
+  classements:
+    build:
+      context: ./classements
+    environment:
+      - CHRONO_HOST=chrono
+    ports:
+      - 3000:3000
+
+  chrono:
+    build:
+      context: ./chrono
+    environment:
+      - CHRONO_ADDRESS=chrono
+      - SIMULATOR_ADDRESS=sim
+    ports:
+      - 3001:3001
+    
+  sim:
+    build:
+      context: ./sim
+    environment:
+      - CHRONO_ADDRESS=chrono
+      - SIMULATOR_ADDRESS=sim
+    ports:
+      - 3002:3002

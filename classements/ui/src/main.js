@@ -105,7 +105,6 @@ new Vue({
           if (data.status.chrono_connected === true) this.$store.state.error = null
           if (data.status.pending) this.$store.state.pending = data.status.pending
           if (data.status.timestamp) startDate = Date.now() - data.status.timestamp
-          this.$store.state.errorMessage = data.connection.error
         }
       }
       connection.onclose = (e) => {

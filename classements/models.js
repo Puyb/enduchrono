@@ -413,6 +413,7 @@ export async function changeStatus(_status) {
 }
 
 export async function syncStatus(chronoStatus) {
+  if (!knex) return
   const index = STATUS.indexOf(status)
   if (chronoStatus === 'start') {
     if (index !== 1) return // si avant départ, retour en test

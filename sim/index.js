@@ -2,8 +2,10 @@
 import 'dotenv/config'
 import Fastify from 'fastify'
 import FastifyWebsocket from '@fastify/websocket'
+import Static from '@fastify/static'
 import * as chrono from './chrono.js'
 import * as fastifyCors from '@fastify/cors'
+import * as path from 'node:path'
 
 const fastify = Fastify({
   logger: true
@@ -12,11 +14,9 @@ fastify.register(FastifyWebsocket)
 fastify.register(fastifyCors, {
   origin: '*',
 })
-/*
 fastify.register(Static, {
-  root: path.join('ui/dist'),
+  root: path.join(import.meta.dirname, 'ui'),
 })
-*/
 
 let send
 
@@ -77,7 +77,7 @@ fastify.register(async function(fastify) {
 try {
   await Promise.all([
     chrono.init(),
-    fastify.listen({ port: 3002 }),
+    fastify.listen({ host: '0.0.0.0', port: 3002 }),
   ])
 } catch (err) {
   console.error(err)
