@@ -2,8 +2,7 @@
 import dgram from 'node:dgram'
 import EventEmitter from 'node:events'
 
-const SIMULATOR_ADDRESS = '192.168.0.43'
-const CHRONO_ADDRESS = '127.0.0.1'
+const {CHRONO_ADDRESS, SIMULATOR_ADDRESS } = process.env;
 const PORT = 2008
 const START = '1b07'
 const STOP = '1b135c'
