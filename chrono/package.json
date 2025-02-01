@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "fastify start -l info app.js",
-    "dev": "fastify start -w -l info --ignore-watch='data.db ui' -P app.js"
+    "dev": "fastify start -w -l info --ignore-watch='data ui' -V -P app.js"
   },
   "author": "Puyb",
   "license": "GPLv3",
@@ -18,10 +18,11 @@
     "eslint-plugin-promise": "^6.1.1"
   },
   "dependencies": {
-    "@fastify/websocket": "^11.0.1",
-    "axios": "^1.7.7",
+    "@fastify/websocket": "^11.0.2",
     "dotenv": "^16.4.7",
-    "fastify": "^5.1.0",
+    "fastify": "^5.2.1",
+    "fastify-cli": "^7.3.0",
+    "fastify-plugin": "^5.0.1",
     "knex": "^3.1.0",
     "sqlite3": "^5.1.7"
   }

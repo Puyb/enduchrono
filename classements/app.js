@@ -1,26 +1,24 @@
 'use strict'
 
 const path = require('path')
-const AutoLoad = require('@fastify/autoload')
-const Static = require('@fastify/static')
 const { open, addTour, syncStatus } = require('./models')
 const { connect, on } = require('./tours')
 
 module.exports = async function (fastify, opts) {
   fastify.register(require('fastify-file-upload'))
+  fastify.register(require('@fastify/multipart'))
   fastify.register(require('@fastify/websocket'))
-  await fastify.register(require( '@fastify/cors'), {
+
+  fastify.register(require( '@fastify/cors'), {
     origin: '*',
   })
 
-  // This loads all plugins defined in routes
-  // define your routes in one of these
-  fastify.register(AutoLoad, {
+  fastify.register(require('@fastify/autoload'), {
     dir: path.join(__dirname, 'routes'),
     options: Object.assign({}, opts)
   })
 
-  fastify.register(Static, {
+  fastify.register(require('@fastify/static'), {
     root: path.join(__dirname, 'ui'),
   })
 

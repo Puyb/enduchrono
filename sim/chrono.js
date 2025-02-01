@@ -121,8 +121,9 @@ export async function init() {
   })
 }
 
-export async function addTour(tour) {
-  toursToSend.push(tour)
+export async function addTour(tour, now) {
+  if (now) toursToSend.unshift(tour)
+  else toursToSend.push(tour)
 }
 
 export function getTimestamp() { return timestamp }

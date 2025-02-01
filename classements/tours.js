@@ -3,7 +3,7 @@ import { getLastTourNumero } from './models.js'
 import WebSocket from 'ws';
 import Event from 'node:events'
 
-const BASE_URL = `${process.env.CHRONO_HOST || 'localhost'}:3001`
+const BASE_URL = `${process.env.CHRONO_HOST || 'localhost'}:${process.env.CHRONO_PORT || 3001}`
 
 let ws
 let connected = false

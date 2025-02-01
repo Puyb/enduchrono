@@ -7,10 +7,10 @@ import Knex from 'knex'
 import klasses from './classes.js'
 export const { Equipe, Equipier, Tour, Transpondeur, tours, transpondeurs, equipes, equipiers, categories } = klasses
 
-export const DUPLICATE_WINDOW_PERIOD = /*60000*/1000
+export const DUPLICATE_WINDOW_PERIOD = 60000 * 2
 export const COURSE_DUREE = 6 * 3600 * 1000
 
-const DIR = './'
+const DIR = './data'
 const CURRENT_FILENAME = path.join(DIR, 'current.db')
 
 export const STATUS = ['TEST', 'DEPART', 'COURSE', 'FIN']
@@ -203,7 +203,7 @@ export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD)
   const lastTimestamp = _.last(equipe.tours?.timestamp)
   if (lastTimestamp > COURSE_DUREE && timestamp >= lastTimestamp) return true
   return equipe.tours.some(tour => {
-    return !tour.status && tour.timestamp - offset < timestamp && timestamp < tour.timestamp + offset
+    return !tour.status && tour.timestamp < timestamp && timestamp < tour.timestamp + offset
   })
 }
 
@@ -386,6 +386,7 @@ export function getLastTourNumero() {
 export async function getCourseInfo() {
   if (!knex) return
   const info = (await knex.select('*').from('course'))[0]
+  if (!info) return
   status = info.status
   return info
 }

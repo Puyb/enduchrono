@@ -5,17 +5,17 @@ import * as chrono from '../tours.js'
 import _ from 'lodash'
 
 export default async function route(fastify, opts) {
-  fastify.get('/websockets/control', { websocket: true }, async ({ socket }, req) => {
+  fastify.get('/websockets/control', { websocket: true }, async (websocket, req) => {
     const listen = (obj, event, cb) => {
       obj.on(event, cb)
-      socket.on('close', () => {
+      websocket.on('close', () => {
         obj.removeListener(event, cb)
       })
     }
     const send = async data => {
       try {
         console.log('sending to websocket', JSON.stringify(data))
-        await socket.send(JSON.stringify(data))
+        await websocket.send(JSON.stringify(data))
       } catch (err) {
         console.error('error in send passage', err)
       }
@@ -67,6 +67,6 @@ export default async function route(fastify, opts) {
       toursQueue.length = 0
       for (const key in equipesQueue) delete equipesQueue[key]
     }
-    socket.on('close', emptyQueues)
+    websocket.on('close', emptyQueues)
   })
 }

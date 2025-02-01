@@ -3,19 +3,28 @@ services:
   classements:
     build:
       context: ./classements
+    volumes:
+      - ./classements/data:/app/data
     environment:
       - CHRONO_HOST=chrono
+      - CHRONO_PORT=3000
     ports:
       - 3000:3000
+    profiles:
+      - prod
 
   chrono:
     build:
       context: ./chrono
+    volumes:
+      - ./chrono/data:/app/data
     environment:
-      - CHRONO_ADDRESS=chrono
-      - SIMULATOR_ADDRESS=sim
+      - CHRONO_ADDRESS=${CHRONO_ADDRESS:-chrono}
+      - CHRONELEC_ADDRESS=${CHRONELEC_ADDRESS:-sim}
     ports:
-      - 3001:3001
+      - 3001:3000
+    profiles:
+      - prod
     
   sim:
     build:
@@ -24,4 +33,75 @@ services:
       - CHRONO_ADDRESS=chrono
       - SIMULATOR_ADDRESS=sim
     ports:
-      - 3002:3002
+      - 3002:3000
+    profiles:
+      - prod
+
+  classements-dev:
+    image: node:23
+    volumes:
+      - ./classements:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run dev"
+    environment:
+      - CHRONO_HOST=chrono-dev
+      - CHRONO_PORT=3000
+    ports:
+      - 3000:3000
+    profiles:
+      - dev
+
+  chrono-dev:
+    image: node:23
+    volumes:
+      - ./chrono:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run dev"
+    environment:
+      - CHRONO_ADDRESS=${CHRONO_ADDRESS:-chrono-dev}
+      - CHRONELEC_ADDRESS=${CHRONELEC_ADDRESS:-sim-dev}
+    ports:
+      - 3001:3000
+    profiles:
+      - dev
+    
+  sim-dev:
+    image: node:23
+    volumes:
+      - ./sim:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run dev"
+    environment:
+      - CHRONO_ADDRESS=chrono-dev
+      - SIMULATOR_ADDRESS=sim-dev
+    ports:
+      - 3002:3000
+    profiles:
+      - dev
+
+  classements-ui:
+    image: node:23
+    volumes:
+      - ./classements/ui:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run serve"
+    environment:
+      - NODE_OPTIONS=--openssl-legacy-provider
+    ports:
+      - 8080:8080
+    profiles:
+      - dev
+
+  sim-ui:
+    image: node:23
+    volumes:
+      - ./sim/ui:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run serve"
+    environment:
+      - NODE_OPTIONS=--openssl-legacy-provider
+    ports:
+      - 8081:8080
+    profiles:
+      - dev
+

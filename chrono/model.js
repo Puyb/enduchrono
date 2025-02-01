@@ -4,7 +4,7 @@ const fs = require('node:fs/promises')
 const path = require('path')
 const Knex = require('knex')
 
-const DIR = './'
+const DIR = './data'
 const CURRENT_FILENAME = path.join(DIR, 'current.db')
 
 const openOrCreate = async () => {
