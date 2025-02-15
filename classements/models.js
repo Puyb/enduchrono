@@ -15,8 +15,14 @@ const CURRENT_FILENAME = path.join(DIR, 'current.db')
 
 export const STATUS = ['TEST', 'DEPART', 'COURSE', 'FIN']
 
+const createDataDirectoryIfNotExists = async () => {
+  if(!await exists(DIR))
+    await fs.mkdir(DIR, {recursive: true})
+}
+
 let knex
 export async function list() {
+  await createDataDirectoryIfNotExists();
   const files = await fs.readdir(DIR)
   return files.filter(name => name.endsWith('.db') && name !== 'current.db')
 }

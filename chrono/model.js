@@ -7,8 +7,14 @@ const Knex = require('knex')
 const DIR = './data'
 const CURRENT_FILENAME = path.join(DIR, 'current.db')
 
+const createDataDirectoryIfNotExists = async () => {
+  if(!await exists(DIR))
+    await fs.mkdir(DIR, {recursive: true})
+}
+
 const openOrCreate = async () => {
   if (await exists(CURRENT_FILENAME)) return open(CURRENT_FILENAME)
+  await createDataDirectoryIfNotExists();
   const filename = path.join(DIR, `${(new Date()).toISOString()}.db`)
   const knex = await open(filename)
   await fs.symlink(filename, CURRENT_FILENAME)
