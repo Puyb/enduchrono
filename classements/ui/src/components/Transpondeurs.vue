@@ -1,46 +1,62 @@
 <template>
-  <div class="transpondeurs">
-    <b-button-toolbar>
-    <b-pagination
-      v-model="currentPage"
-      :total-rows="$store.state.transpondeurs.length"
-      :per-page="perPage"
-      aria-controls="tour-table"
-    ></b-pagination>
-      <b-button-group>
-        <b-button :variant="selection=='transpondeursAll' ? 'info' : ''" @click="selection = 'transpondeursAll'">Tous <b-badge pill>{{ transpondeursAll.length }}</b-badge></b-button>
-        <b-button :variant="selection=='transpondeursActive' ? 'info' : ''" @click="selection = 'transpondeursActive'">Actifs <b-badge pill>{{ transpondeursActive.length }}</b-badge></b-button>
-        <b-button :variant="selection=='transpondeursInactive' ? 'info' : ''" @click="selection = 'transpondeursInactive'">Inactifs <b-badge pill>{{ transpondeursInactive.length }}</b-badge></b-button>
-        <b-button :variant="selection=='transpondeursNeverSeen' ? 'info' : ''" @click="selection = 'transpondeursNeverSeen'">Sans passage course <b-badge pill>{{ transpondeursNeverSeenCourse.length }}</b-badge></b-button>
-        <b-button :variant="selection=='transpondeursNeverSeen' ? 'info' : ''" @click="selection = 'transpondeursNeverSeen'">Sans passage <b-badge pill>{{ transpondeursNeverSeen.length }}</b-badge></b-button>
-        <b-button :variant="selection=='transpondeursUnknown' ? 'info' : ''" @click="selection = 'transpondeursUnknown'">Inconnus <b-badge pill>{{ transpondeursUnknown.length }}</b-badge></b-button>
-      </b-button-group>
-      <b-input-group>
-        <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
-      </b-input-group>
-    </b-button-toolbar>
-    <b-table id="transpondeurs-table" striped hover small :items="transpondeursSelected" :fields="fields" :tbody-tr-class="rowClass" :perPage="perPage" :currentPage="currentPage">
-      <template #cell(nom)="data">
-        {{ $store.state.equipiers[data.item.dossard]?.nom }}
-      </template>
-      <template #cell(prenom)="data">
-        {{ $store.state.equipiers[data.item.dossard]?.prenom }}
-      </template>
-      <template #cell(equipe)="data">
-        <b-link @click="showEquipe(data.item.dossard)">
-          {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.nom }}
-        </b-link>
-      </template>
-      <template #cell(categorie)="data">
-        {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.categorie }}
-      </template>
-      <template #cell(passages)="data">
-        {{ tours(data.item).length }}
-      </template>
-      <template #cell(timestamp)="data">
-        {{ lastSeen(data.item) }}
-      </template>
-    </b-table>
+  <div class="transpondeurs d-flex flex-column h-100" style="max-height: 100vh;">
+    <div class="d-flex flex-column">
+      <b-container fluid>
+        <b-row>
+          <b-col cols="8">
+            <b-button-toolbar>
+              <b-button-group size="sm">
+                <b-button :variant="selection=='transpondeursAll' ? 'info' : ''" @click="selection = 'transpondeursAll'">Tous <b-badge pill variant="light">{{ transpondeursAll.length }}</b-badge></b-button>
+                <b-button :variant="selection=='transpondeursActive' ? 'info' : ''" @click="selection = 'transpondeursActive'">Actifs <b-badge pill variant="light">{{ transpondeursActive.length }}</b-badge></b-button>
+                <b-button :variant="selection=='transpondeursInactive' ? 'info' : ''" @click="selection = 'transpondeursInactive'">Inactifs <b-badge pill variant="light">{{ transpondeursInactive.length }}</b-badge></b-button>
+                <b-button :variant="selection=='transpondeursNeverSeenCourse' ? 'info' : ''" @click="selection = 'transpondeursNeverSeenCourse'">Sans passage course <b-badge pill variant="light">{{ transpondeursNeverSeenCourse.length }}</b-badge></b-button>
+                <b-button :variant="selection=='transpondeursNeverSeen' ? 'info' : ''" @click="selection = 'transpondeursNeverSeen'">Sans passage <b-badge pill variant="light">{{ transpondeursNeverSeen.length }}</b-badge></b-button>
+                <b-button :variant="selection=='transpondeursUnknown' ? 'info' : ''" @click="selection = 'transpondeursUnknown'">Inconnus <b-badge pill variant="light">{{ transpondeursUnknown.length }}</b-badge></b-button>
+              </b-button-group>
+              <b-input-group size="sm">
+                <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
+              </b-input-group>
+            </b-button-toolbar>
+          </b-col>
+          <b-col cols="4">
+            <b-pagination
+              v-model="currentPage"
+              :total-rows="transpondeursSelected.length"
+              :per-page="perPage"
+              aria-controls="transpondeurs-table"
+              first-number
+              last-number
+              size="sm"
+              align="right"
+            ></b-pagination>
+          </b-col>
+        </b-row>
+      </b-container>
+    </div>
+    <div class="d-flex flex-column flex-fill" style="overflow: scroll; position: relative;">
+      <b-table id="transpondeurs-table" striped hover small sticky-header="100vh" :items="transpondeursSelected" :fields="fields" :tbody-tr-class="rowClass" :perPage="perPage" :currentPage="currentPage">
+        <template #cell(nom)="data">
+          {{ $store.state.equipiers[data.item.dossard]?.nom }}
+        </template>
+        <template #cell(prenom)="data">
+          {{ $store.state.equipiers[data.item.dossard]?.prenom }}
+        </template>
+        <template #cell(equipe)="data">
+          <b-link @click="showEquipe(data.item.dossard)">
+            {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.nom }}
+          </b-link>
+        </template>
+        <template #cell(categorie)="data">
+          {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.categorie }}
+        </template>
+        <template #cell(passages)="data">
+          {{ tours(data.item).length }}
+        </template>
+        <template #cell(timestamp)="data">
+          {{ lastSeen(data.item) }}
+        </template>
+      </b-table>
+    </div>
   </div>
 </template>
 
@@ -99,8 +115,8 @@ export default {
     transpondeursAll() { return this.$store.state.transpondeurs },
     transpondeursActive() { return this.$store.state.transpondeurs.filter(t => t.dossard && !t.deleted) },
     transpondeursInactive() { return this.$store.state.transpondeurs.filter(t => t.deleted) },
-    transpondeursNeverSeenCourse() { return this.$store.state.transpondeurs.filter(t => !this.tours(t).filter(tr => tr.status !== 'ignore').length) },
-    transpondeursNeverSeen() { return this.$store.state.transpondeurs.filter(t => !this.tours(t).length) },
+    transpondeursNeverSeenCourse() { return this.$store.state.transpondeurs.filter(t => t.dossard && !this.tours(t).filter(tr => tr.status !== 'ignore').length) },
+    transpondeursNeverSeen() { return this.$store.state.transpondeurs.filter(t => t.dossard && !this.tours(t).length) },
     transpondeursUnknown() { return this.$store.state.transpondeurs.filter(t => !t.dossard) },
     transpondeursSelected() {
       const words = this.search.toLowerCase().split(' ').filter(v => v)
@@ -141,4 +157,9 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
+@supports (position: sticky) {
+  .b-table-sticky-header > :deep(.table.b-table > thead > tr > th) {
+    position: sticky !important;
+  }
+}
 </style>

@@ -1,32 +1,53 @@
 <template>
-  <div class="equipes">
-    <b-button-toolbar>
-      <b-button-group>
-        <b-button :variant="currentCategorie==null ? 'info' : ''" @click="currentCategorie = null">Général</b-button>
-        <b-button v-for="categorie in categories" :key="categorie" :variant="categorie===currentCategorie ? 'info' : ''" @click="currentCategorie = categorie">{{ categorie }}</b-button>
-      </b-button-group>
-      <b-input-group>
-        <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
-      </b-input-group>
-    </b-button-toolbar>
-    <b-table id="equipes" striped hover small :items="equipes" :fields="fields"
-             primary-key="equipe"
-      :tbody-transition-props="transProps">
-      <template #cell(equipe)="data">
-          <b-link @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</b-link>
-      </template>
-      <template #cell(nom)="data">
-          <b-link @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</b-link>
-      </template>
-      <template #cell(tours)="data">
-        <transition name="highlight-change" mode="out-in">
-          <div :key="data.item.tours">
-              {{ data.item.tours + data.item.penalite }}
-              <span class="text-danger" v-if="data.item.penalite">({{ data.item.penalite ? `${data.item.tours}${data.item.penalite}` : '' }} <BIconFlagFill></BIconFlagFill>)</span>
-          </div>
-        </transition>
-      </template>
-    </b-table>
+  <div class="equipes d-flex flex-column h-100" style="max-height: 100vh;">
+    <div class="d-flex flex-column">
+      <b-container fluid>
+        <b-row>
+          <b-col cols="8">
+            <b-button-toolbar>
+              <b-button-group size="sm">
+                <b-button :variant="currentCategorie==null ? 'info' : ''" @click="currentCategorie = null">Général <b-badge pill variant="light">{{ Object.keys($store.state.equipes).length }}</b-badge></b-button>
+                <b-button v-for="categorie in categories" :key="categorie" :variant="categorie===currentCategorie ? 'info' : ''" @click="currentCategorie = categorie">{{ categorie }} <b-badge pill variant="light">{{ Object.values($store.state.equipes).filter(e => e.categorie === categorie).length }}</b-badge></b-button>
+              </b-button-group>
+              <b-input-group size="sm">
+                <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
+              </b-input-group>
+            </b-button-toolbar>
+          </b-col>
+          <b-col cols="4">
+            <b-pagination
+              v-model="currentPage"
+              :total-rows="equipes.length"
+              :per-page="perPage"
+              aria-controls="equipes-table"
+              first-number
+              last-number
+              size="sm"
+              align="right"
+            ></b-pagination>
+          </b-col>
+        </b-row>
+      </b-container>
+    </div>
+    <div class="d-flex flex-column flex-fill" style="overflow: scroll; position: relative;">
+      <b-table id="equipes-table" striped hover small sticky-header="100vh" :items="equipes" :fields="fields"
+          primary-key="equipe" :tbody-transition-props="transProps" :perPage="perPage" :currentPage="currentPage">
+        <template #cell(equipe)="data">
+            <b-link @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</b-link>
+        </template>
+        <template #cell(nom)="data">
+            <b-link @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</b-link>
+        </template>
+        <template #cell(tours)="data">
+          <transition name="highlight-change" mode="out-in">
+            <div :key="data.item.tours">
+                {{ data.item.tours + data.item.penalite }}
+                <span class="text-danger" v-if="data.item.penalite">({{ data.item.penalite ? `${data.item.tours}${data.item.penalite}` : '' }} <BIconFlagFill></BIconFlagFill>)</span>
+            </div>
+          </transition>
+        </template>
+      </b-table>
+    </div>
   </div>
 </template>
 
@@ -35,12 +56,12 @@ import _ from 'lodash'
 import { formatTime } from '../utils'
 export default {
   name: 'Equipes',
-  props: {
-    currentCategorie: null,
-  },
   data() {
     return {
-        search: '',
+      currentCategorie: null,
+      search: '',
+      perPage: 100,
+      currentPage: 1,
       transProps: {
         // Transition name
         name: 'flip-list'
@@ -114,8 +135,8 @@ export default {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style>
-table#equipes .flip-list-move {
+<style scoped>
+table#equipes-table .flip-list-move {
   transition: transform .5s;
 }
 .highlight-change-enter-active {
@@ -126,5 +147,10 @@ table#equipes .flip-list-move {
 }
 .highlight-change-enter-from, .highlight-change-leave-to {
   background-color: #ff000000;
+}
+@supports (position: sticky) {
+  .b-table-sticky-header > :deep(.table.b-table > thead > tr > th) {
+    position: sticky !important;
+  }
 }
 </style>

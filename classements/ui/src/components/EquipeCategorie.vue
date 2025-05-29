@@ -36,7 +36,6 @@
 </template>
 
 <script>
-//import { formatTime, formatDuree } from '../utils'
 import { rankValue } from '../utils'
 export default {
   name: 'Tours',

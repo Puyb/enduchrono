@@ -35,13 +35,8 @@ module.exports = async function(fastify, opts) {
     reply.send({})
   })
 
-  fastify.get('/status', async function (request, reply) {
-    reply.send({})
-  })
-
   fastify.register(async function(_fastify) {
     _fastify.get('/tours', { websocket: true }, async (socket, req) => {
-      const from = parseInt(req.query.from)
       const send = async data => {
         try {
           console.log('sending to websocket', JSON.stringify(data))
@@ -51,13 +46,22 @@ module.exports = async function(fastify, opts) {
         }
       }
 
-      const passages = await model.getPassages(from)
-      for (const passage of passages) {
-        console.log(passage)
-        await send(passage)
-      }
+      let sendPassages = async () => {
+        const from = parseInt(req.query.from)
+        const passages = await model.getPassages(from)
+        for (const passage of passages) {
+          console.log(passage)
+          await send(passage)
+        }
 
-      event.on('passage', send)
+        event.on('passage', send)
+      }
+      chrono.on('status', ({status}) => {
+        if (status.status === 'start' && sendPassages) {
+          sendPassages().catch(console.error);
+          sendPassages = null;
+        }
+      });
       chrono.on('status', send)
       chrono.on('connection', send)
       

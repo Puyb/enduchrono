@@ -1,16 +1,16 @@
 <template>
   <div>
     <div class="d-flex flex-column" style="height: 100vh; max-height: 100vh;" v-if="!!$store.state.course">
-      <b-navbar toggleable="lg" type="dark" variant="info" class="sticky-top">
+      <b-navbar toggleable="lg" type="dark" variant="info" class="sticky-top mb-1">
         <b-navbar-brand href="#">{{ $store.state.course.name }}</b-navbar-brand>
 
         <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
 
         <b-collapse id="nav-collapse" is-nav>
           <b-navbar-nav>
-            <b-nav-item :active="$route.name === 'tours'" to="/tours">Tours</b-nav-item>
-            <b-nav-item :active="['equipe', 'equipes', 'categories'].includes($route.name)" to="/equipes">Équipes / Classements</b-nav-item>
-            <b-nav-item :active="$route.name === 'transpondeurs'" to="/transpondeurs">Transpondeurs</b-nav-item>
+            <b-nav-item :active="$route.name === 'tours'" to="/tours">Tours <b-badge pill variant="light">{{ toursAll.length }}</b-badge></b-nav-item>
+            <b-nav-item :active="['equipe', 'equipes', 'categories'].includes($route.name)" to="/equipes">Équipes / Classements <b-badge pill variant="light">{{ Object.keys($store.state.equipes).length }}</b-badge></b-nav-item>
+            <b-nav-item :active="$route.name === 'transpondeurs'" to="/transpondeurs">Transpondeurs <b-badge pill variant="light">{{ transpondeursAll.length }}</b-badge></b-nav-item>
             <b-nav-item :active="$route.name === 'stats'" to="/stats">Stats</b-nav-item>
           </b-navbar-nav>
           <b-navbar-nav class="ml-auto" id="status">
@@ -88,7 +88,20 @@
       </b-row>
     </b-modal>
     <b-modal v-model="showDepart" title="Départ" @ok="startCourse" @cancel="startTest" ok-title="Départ" cancel-title="Mode test">
-      Démarrer la course ?
+      <template #default="{}">
+        Démarrer la course ?
+      </template>
+      <template #modal-footer="{}">
+        <b-button size="sm" variant="success" @click="startCourse()">
+          Départ
+        </b-button>
+        <b-button size="sm" variant="secondary" @click="startTest()">
+          Mode test
+        </b-button>
+        <b-button size="sm" variant="danger" @click="closeCourse()">
+          Fermer la course
+        </b-button>
+      </template>
     </b-modal>
   </div>
 </template>
@@ -101,7 +114,15 @@ export default {
   components: { BIconstack, BIconStopwatch, BIconCpu, BIconTrophy, BIconLaptop, BIconEmojiFrownFill }, 
   computed: {
     showError() { return !!this.$store.state.error },
-    showDepart() { return this.$store.state.course?.status === 'DEPART' }
+    showDepart() { return this.$store.state.course?.status === 'DEPART' },
+    toursAll() {
+      if (this.$store.state.course.status === 'TEST') {
+        return this.$store.state.tours.filter(t => t.status === 'ignore')
+      } else {
+        return this.$store.state.tours.filter(t => t.status !== 'ignore')
+      }
+    },
+    transpondeursAll() { return this.$store.state.transpondeurs },
   },
   methods: {
     async stopTest() {

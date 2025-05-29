@@ -16,7 +16,8 @@
         <b-col cols="8">
           <b-table striped hover small :items="equipiers" :fields="equipiersFields" :tbody-tr-class="rowClass">
               <template #cell(tours)="data">
-                  {{ data.item.tours }} <b-button variant="outline-secondary" size="sm"><BIconPlus></BIconPlus></b-button>
+                  {{ data.item.tours }}
+                  <EquipierTour :equipier="data.item" />
               </template>
               <template #cell(transpondeurs)="data">
                   <EquipierTranspondeurs :equipier="data.item" />
@@ -43,11 +44,12 @@ import EquipierChart from './EquipierChart.vue'
 import EquipePenalite from './EquipePenalite.vue'
 import EquipeCategorie from './EquipeCategorie.vue'
 import EquipierTranspondeurs from './EquipierTranspondeurs.vue'
+import EquipierTour from './EquipierTour.vue'
 import ToursTable from './ToursTable.vue'
 import { formatTime, formatDuree } from '../utils'
 export default {
   name: 'Tours',
-  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, ToursTable },
+  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, EquipierTour, ToursTable },
   props: {
     numero: null,
   },
@@ -91,12 +93,10 @@ export default {
         {
           key: 'timestamp',
           sortable: true,
-          formatter: formatTime
         },
         {
           key: 'duree',
           sortable: true,
-          formatter: formatDuree
         },
       ],
       equipierColors: ['primary', 'danger', 'success', 'warning', 'info'],

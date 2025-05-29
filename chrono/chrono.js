@@ -10,25 +10,35 @@ const STATUS = Buffer.from('1b05', 'hex')
 const ACK = Buffer.from('1b11', 'hex')
 const REPEAT = Buffer.from('1b12', 'hex')
 
-const TRANSPONDEUR_REGEXP = /^<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d+) (\d+)>/
 // <STA 119371 00:00'11"648 99 01 3 1579>
+const TRANSPONDEUR_REGEXP = /^<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d+) (\d+)>/
+// [00:00'12" 23 00 10 10]
+const STATUS_REGEXP = /^\[(\d+):(\d+)'(\d+)" (\d+) (\d+) (\d+) (\d+)\]/
 
 const socket = dgram.createSocket('udp4')
-let pendingCommand = null
+const pendingCommands = {
+  passage: {
+    regex: TRANSPONDEUR_REGEXP,
+    async resolve(match) {
+      const [, transpondeur, hour, minute, second, milli] = match
+      await send(ACK)
+      const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
+      event.emit('passage', { transpondeur, timestamp })
+    }
+  }
+}
 
 const event = new EventEmitter()
 
 socket.on('message', async (message, rinfo) => {
   try {
     console.log(`server got: ${message.toString()} from ${rinfo.address}:${rinfo.port}`)
-    const match = message.toString().match(TRANSPONDEUR_REGEXP)
-    if (match) {
-      const [, transpondeur, hour, minute, second, milli] = match
-      await send(ACK)
-      const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
-      event.emit('passage', { transpondeur, timestamp })
+    for (const { regex, resolve } of Object.values(pendingCommands)) {
+      const match = message.toString().match(regex)
+      if (match) {
+        resolve(match)
+      }
     }
-    if (pendingCommand) return pendingCommand(message)
   } catch (err) {
     console.error(err)
   }
@@ -60,23 +70,30 @@ class TimeoutError extends Error {
   }
 }
 
-const command = async (message) => {
-  if (pendingCommand) throw new Error('pending command')
+const command = async (message, regex) => {
   return new Promise((resolve, reject) => {
-    pendingCommand = resolve
+    pendingCommands[message] = { regex, resolve }
     setTimeout(() => { reject(new TimeoutError()) }, 1000)
     send(message).catch(reject)
-  }).finally(() => {
-    pendingCommand = null
   })
 }
 
+let forceStatus = null // use to force the status when the chrono has just started
+                       // as the chrono is still set to 0, we can't use it to determine the status
 const getStatus = async () => {
   try {
-    const message = await command(STATUS)
+    const match = await command(STATUS, STATUS_REGEXP)
     // decode status
-    const { status, timestamp, pending } = JSON.parse(message.toString())
-    return { connected: true, pending, timestamp, status }
+    const [, hour, minute, second, noiseSta, noiseBox, minSta, minBox] = match
+    const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000
+    const status = forceStatus || (timestamp ? 'start' : 'stop')
+    const noise = {
+      Sta: noiseSta,
+      Box: noiseBox,
+      minSta,
+      minBox,
+    }
+    return { connected: true, timestamp, status, noise }
   } catch (err) {
     if (err instanceof TimeoutError) return { connected: false }
     throw err
@@ -89,11 +106,10 @@ const repeat = async () => {
 
 let lastConnected = false
 const check = async () => {
-  const { status, connected, pending, timestamp } = await getStatus()
+  const { status, connected, timestamp, noise } = await getStatus()
   if (connected !== lastConnected) event.emit('connection', { connected })
   lastConnected = connected
-  event.emit('status', { status: { timestamp, pending, status } })
-  if (pending) await repeat()
+  event.emit('status', { status: { timestamp, status, noise } })
   return status
 }
 
@@ -109,8 +125,16 @@ module.exports = {
   },
   send,
   command,
-  async start() { return command(START) },
-  async stop() { return command(STOP) },
+  async start() {
+    await command(START, /^DEPART_/)
+    forceStatus = 'start'
+    setTimeout(() => forceStatus = null, 1100)
+    await check()
+  },
+  async stop() {
+    await command(STOP, /^STOP_/)
+    await check()
+  },
   getStatus,
   repeat,
   check,

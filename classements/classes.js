@@ -1,10 +1,19 @@
 'use strict';
 
-const tours = []
-const transpondeurs = {}
-const equipes = {}
-const equipiers = {}
-const categories = { general: [] }
+export const tours = []
+export const transpondeurs = {}
+export const equipes = {}
+export const equipiers = {}
+export const categories = { general: [] }
+export const STATUS = ['TEST', 'DEPART', 'COURSE', 'FIN']
+
+export const reset = () => {
+  tours.length = 0
+  for (const obj of [ transpondeurs, equipes, equipiers, categories ]) {
+    for (const k in obj) delete obj[k]
+  }
+  categories.general = []
+}
 
 class Base {
   constructor(row) {
@@ -14,7 +23,7 @@ class Base {
   static key = 'id'
 }
 
-class Equipe extends Base{
+export class Equipe extends Base{
   constructor(row) {
     super(row)
     this.tours = []
@@ -41,7 +50,7 @@ const addMonitoredValue = (obj, name) => {
   })
 }
 
-class Equipier extends Base {
+export class Equipier extends Base {
   constructor(row) {
     super(row)
     this.transpondeurs = []
@@ -49,7 +58,7 @@ class Equipier extends Base {
   static key = 'dossard'
 }
 
-class Tour extends Base {
+export class Tour extends Base {
   constructor(row) {
     super(row)
     Object.defineProperty(this, 'duree', {
@@ -69,20 +78,7 @@ class Tour extends Base {
   }
 }
 
-class Transpondeur extends Base {
+export class Transpondeur extends Base {
 }
 
-const isSameEquipe = (t1, t2 = {}) => String(t1.dossard).slice(0, -1) === String(t2.dossard).slice(0, -1)
-
-module.exports = {
-  Equipe,
-  Equipier,
-  Tour,
-  Transpondeur,
-  tours,
-  transpondeurs,
-  equipes,
-  equipiers,
-  categories,
-  isSameEquipe,
-}
+export const isSameEquipe = (t1, t2 = {}) => String(t1.dossard).slice(0, -1) === String(t2.dossard).slice(0, -1)

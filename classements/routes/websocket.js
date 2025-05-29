@@ -1,15 +1,17 @@
 'use strict'
-import { tours, equipes, equipiers, categories, transpondeurs, getCourseInfo } from '../models.js'
+import { tours, equipes, equipiers, categories, transpondeurs } from '../classes.js'
+import { getCourseInfo } from '../models.js'
 import * as models from '../models.js'
+import * as sql from '../sql.js'
 import * as chrono from '../tours.js'
 import _ from 'lodash'
 
 export default async function route(fastify, opts) {
   fastify.get('/websockets/control', { websocket: true }, async (websocket, req) => {
     const listen = (obj, event, cb) => {
-      obj.on(event, cb)
+      obj.events.on(event, cb)
       websocket.on('close', () => {
-        obj.removeListener(event, cb)
+        obj.events.removeListener(event, cb)
       })
     }
     const send = async data => {
@@ -30,24 +32,29 @@ export default async function route(fastify, opts) {
         equipes: _.mapValues(equipes, equipe => ({ ...equipe, tours: equipe.tours.length })),
         equipiers,
         transpondeurs: _.values(transpondeurs),
-        filenames: await models.list(),
+        filenames: await sql.list(),
       })
     }
     sendInit()
-    listen(models, 'close', sendInit)
-    listen(models, 'open', sendInit)
+    listen(sql, 'close', sendInit)
+    listen(sql, 'open', sendInit)
 
     listen(models, 'course', async (course) => send({ event: 'course', course }))
 
     const toursQueue = []
     const equipesQueue = {}
+    const equipiersQueue = {}
     const transpondeursQueue = {}
-    listen(models, 'tours', async (tour, equipe, equipier, update = false) => {
+    listen(models, 'tours', async (tour, update = false) => {
       toursQueue.push({ event: 'tour', tour, update })
       sendUpdates()
     })
     listen(models, 'equipes', async (equipe) => {
       equipesQueue[equipe.equipe] = { event: 'equipe', equipe: { ...equipe, tours: equipe.tours.length } }
+      sendUpdates()
+    })
+    listen(models, 'equipier', async (equipier) => {
+      equipiersQueue[equipier.dossard] = { event: 'equipier', equipier }
       sendUpdates()
     })
     listen(models, 'transpondeur', async (transpondeur) => {
@@ -58,7 +65,7 @@ export default async function route(fastify, opts) {
     listen(chrono, 'connection', connection => send({ event: 'connection', connection }))
 
     const sendUpdates = _.throttle(async () => {
-      const events = [...toursQueue, ...Object.values(equipesQueue), ...Object.values(transpondeursQueue) ]
+      const events = [...toursQueue, ...Object.values(equipesQueue), ...Object.values(equipiersQueue), ...Object.values(transpondeursQueue) ]
       emptyQueues()
       await send({ event: 'update', events })
     }, 200)
@@ -66,6 +73,7 @@ export default async function route(fastify, opts) {
     const emptyQueues = () => {
       toursQueue.length = 0
       for (const key in equipesQueue) delete equipesQueue[key]
+      for (const key in equipiersQueue) delete equipiersQueue[key]
     }
     websocket.on('close', emptyQueues)
   })

@@ -44,6 +44,7 @@ new Vue({
   store,
 
   mounted(){
+    console.log('mounted', new Date())
     this.URL = location.origin
     if (window.webpackHotUpdate) { // dev mode
       this.URL = this.URL.replace(':8080', ':3000')
@@ -64,8 +65,9 @@ new Vue({
     }, 100)
 
     const connect = () => {
+      console.log('connect', new Date())
       const connection = new WebSocket(`${this.URL.replace(/^http/, 'ws')}/websockets/control`)
-      connection.onmessage = (message) => {
+      connection.addEventListener('message', (message) => {
         const data = JSON.parse(message.data)
         if (data.event !== 'status') console.log('data', data)
         if (data.event === 'init') {
@@ -85,10 +87,17 @@ new Vue({
               if (event.update) {
                 Object.assign(this.$store.state.tours.find(t => t.id === event.tour.id), event.tour)
               } else {
-                this.$store.state.tours.unshift(event.tour)
+                const tours = this.$store.state.tours
+                if (tours[0]?.timestamp > event.tour.timestamp) {
+                  const pos = tours.findIndex(t => t.timestamp < event.tour.timestamp)
+                  tours.splice(pos + 1, 0, event.tour)
+                } else {
+                  tours.unshift(event.tour)
+                }
               }
             }
             if (event.event === 'equipe') this.$store.state.equipes[event.equipe.equipe] = event.equipe
+            if (event.event === 'equipier') this.$store.state.equipiers[event.equipier.dossard] = event.equipier
             if (event.event === 'transpondeur') this.$store.state.transpondeurs.unshift(event.transpondeur)
           }
         }
@@ -105,24 +114,28 @@ new Vue({
           if (data.status.chrono_connected === true) this.$store.state.error = null
           if (data.status.pending) this.$store.state.pending = data.status.pending
           if (data.status.timestamp) startDate = Date.now() - data.status.timestamp
+          if (data.status.noise) {
+            this.$store.state.noise.push(data.status.noise)
+            if(this.$store.state.noise.length > 60 * 5)
+              this.$store.state.noise.shift()
+          }
         }
-      }
-      connection.onclose = (e) => {
-        console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+      })
+      connection.addEventListener('close', (e) => {
+        console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason)
         this.$store.state.error = 'classement'
         setTimeout(function() {
           connect();
-        }, 1000);
-      };
-
-      connection.onerror = (err) => {
-        console.error('Socket encountered error: ', err.message, 'Closing socket');
+        }, 1000)
+      })
+      connection.addEventListener('error', (err) => {
+        console.error('Socket encountered error: ', err.message, 'Closing socket')
         connection.close();
-      };
-      connection.onopen = () => {
-        console.log('connected')
+      })
+      connection.addEventListener('open', () => {
+        console.log('connected', new Date())
         this.$store.state.error = ''
-      }
+      })
     }
     connect()
   }

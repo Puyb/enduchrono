@@ -5,6 +5,12 @@
       <b-button v-if="!data.item.status" variant="danger" @click="deleteTour(data.item)" size="sm" class="tour-delete"><b-icon-trash /></b-button>
       <b-button v-if="['deleted', 'duplicate'].includes(data.item.status)" variant="danger" @click="deleteTour(data.item)" size="sm" class="tour-delete"><b-icon-recycle /></b-button>
     </template>
+    <template #cell(transpondeur)="data">
+      {{ data.item.transpondeur || data.item.source }}
+    </template>
+    <template #cell(nom)="data">
+      {{ $store.state.equipiers[data.item.dossard]?.nom }}
+    </template>
     <template #cell(nom)="data">
       {{ $store.state.equipiers[data.item.dossard]?.nom }}
     </template>
@@ -31,11 +37,22 @@
     <template #cell(numeroParEquipe)="data">
       {{ numero(data.item) }}
     </template>
+    <template #cell(timestamp)="data">
+      {{ formatTime(data.item.timestamp) }}
+    </template>
+    <template #cell(duree)="data">
+      {{ formatDuree(data.item.duree) }}
+      <span v-if="data.item.newDuree">
+        <BIconArrowRightShort></BIconArrowRightShort>
+        {{ formatDuree(data.item.newDuree) }}
+      </span>
+    </template>
   </b-table>
 </template>
 
 <script>
 import { groupBy, mapValues } from 'lodash'
+import { formatTime, formatDuree } from '../utils'
 export default {
   name: 'ToursTable',
   props: {
@@ -52,6 +69,8 @@ export default {
   computed: {
   },
   methods: {
+    formatTime,
+    formatDuree,
     rowClass(item, type) {
       if (!item || type !== 'row') return
       const classes = []
@@ -65,19 +84,32 @@ export default {
     },
     async deleteTour(tour) {
       const equipe = this.$store.state.equipes[String(tour.dossard).slice(0, -1)]
-      const message = `Voulez vous vraiment supprimer le tour ${tour.id} de l'équipe ${equipe?.nom} ?`
-      if (await this.$bvModal.msgBoxConfirm(message, {
-        title: 'Suppression de tour',
-        okVariant: 'danger',
-        okTitle: 'Supprimer',
-        cancelTitle: 'Annuler',
-      })) {
-        await fetch(`${this.$root.URL}/tour/${tour.id}`, {
-          method: 'delete',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        })
+      if (tour.status) {
+        const message = `Voulez vous vraiment restaurer le tour ${tour.id} de l'équipe ${equipe?.nom} ?`
+        if (await this.$bvModal.msgBoxConfirm(message, {
+          title: 'Restauration de tour',
+          okVariant: 'danger',
+          okTitle: 'Restaurer',
+          cancelTitle: 'Annuler',
+        })) {
+          await fetch(`${this.$root.URL}/tour/${tour.id}`, {
+            method: 'post',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ status: null }),
+          })
+        }
+      } else {
+        const message = `Voulez vous vraiment supprimer le tour ${tour.id} de l'équipe ${equipe?.nom} ?`
+        if (await this.$bvModal.msgBoxConfirm(message, {
+          title: 'Suppression de tour',
+          okVariant: 'danger',
+          okTitle: 'Supprimer',
+          cancelTitle: 'Annuler',
+        })) {
+          await fetch(`${this.$root.URL}/tour/${tour.id}`, {
+            method: 'delete',
+          })
+        }
       }
     },
     numero(tour) {

@@ -14,7 +14,7 @@
 
 <script>
 import { Line as LineChartGenerator } from 'vue-chartjs/legacy'
-import { formatDuree } from '../utils'
+import * as _ from 'lodash'
 
 import {
   Chart as ChartJS,
@@ -38,12 +38,12 @@ ChartJS.register(
 )
 
 export default {
-  name: 'LineChart',
+  name: 'NoiseChart',
   components: {
     LineChartGenerator
   },
   props: {
-    equipiers: { type: Array, default: () => [] },
+    noise: { type: Array, default: () => [] },
     chartId: {
       type: String,
       default: 'line-chart'
@@ -83,13 +83,6 @@ export default {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: {
-          y: {
-            ticks: {
-                callback(value) { return formatDuree(value).split('.')[0]; },
-            }
-          }
-        },
         animation: false,
       }
     }
@@ -99,28 +92,25 @@ export default {
       const style = getComputedStyle(document.body);
       const theme = {
         primary: style.getPropertyValue('--primary'),
-        secondary: style.getPropertyValue('--secondary'),
-        success: style.getPropertyValue('--success'),
-        info: style.getPropertyValue('--info'),
         warning: style.getPropertyValue('--warning'),
         danger: style.getPropertyValue('--danger'),
+        success: style.getPropertyValue('--success'),
+        info: style.getPropertyValue('--info'),
         light: style.getPropertyValue('--light'),
         dark: style.getPropertyValue('--dark'),
+        secondary: style.getPropertyValue('--secondary'),
       };
-      const colors = this.colors?.map(color => (theme[color] || color)) || ['#0000aa', '#00aa00', '#aa0000', '#00aaaa', '#aa00aa']
-      const labels = []
-      const datasets = this.equipiers.map((equipier, index) => {
+      const colors = Object.values(theme)
+      const labels = _.keys(this.noise).reverse()
+      const datasets = ['Sta', 'Box', 'minSta', 'minBox'].map((key, index) => {
         return {
-          label: `${equipier.dossard} ${equipier.nom} ${equipier.prenom}`,
+          label: key,
           borderColor: colors[index],
           backgroundColor: colors[index],
-          data: this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard).map((tour, index2) => {
-            if (labels.length <= index2) labels.push(index2)
-            return tour.duree
-          }).reverse(),
+          data: _.map(this.noise, key),
+          lineTension: 0.8,
         }
       })
-
       return { datasets, labels }
     },
   },

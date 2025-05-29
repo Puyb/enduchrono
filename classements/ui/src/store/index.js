@@ -16,6 +16,7 @@ export default new Vuex.Store({
     transpondeurs: [],
     filenames: [],
     pending: 0,
+    noise: [],
   },
   mutations: {
     setStatus(state, status) {

@@ -1,8 +1,9 @@
 'use strict'
 
 const path = require('path')
-const { open, addTour, syncStatus } = require('./models')
-const { connect, on } = require('./tours')
+const { open} = require('./sql')
+const { initModel, addTour, syncStatus } = require('./models')
+const { connect, events } = require('./tours')
 
 module.exports = async function (fastify, opts) {
   fastify.register(require('fastify-file-upload'))
@@ -22,12 +23,13 @@ module.exports = async function (fastify, opts) {
     root: path.join(__dirname, 'ui'),
   })
 
-  // get status
-  await open()
   // open db
+  await open()
+  await initModel()
   // connect to chrono
   await connect()
-  on('tour', data => console.log('trou', data))
-  on('tour', data => addTour(data.id, data.transpondeur, data.timestamp))
-  on('status', ({ status }) => syncStatus(status)) 
+  console.log('connected')
+  events.on('tour', data => console.log('tour', data))
+  events.on('tour', data => addTour(data))
+  events.on('status', ({ status }) => syncStatus(status)) 
 }

@@ -60,21 +60,18 @@ socket.on('message', async (message, { address }) => {
             event.emit('timestamp', timestamp)
           }, TIMESTAMP_INTERVAL)
         }
-        await send(CHRONO_ADDRESS, ACK)
+        await send(CHRONO_ADDRESS, `DEPART_${new Date().toISOString().replace(/T(\d{2}:\d{2}:\d{2}).*/, '__$1')}`)
         break;
       case STOP:
         status = 'stop'
         event.emit('stop')
         clearInterval(timestampTimer)
+        timestamp = 0
         timestampTimer = null
-        await send(CHRONO_ADDRESS, ACK)
+        await send(CHRONO_ADDRESS, `STOP_${new Date().toISOString().replace(/T(\d{2}:\d{2}:\d{2}).*/, '__$1')}`)
         break;
       case STATUS:
-        await send(CHRONO_ADDRESS, JSON.stringify({
-          status,
-          timestamp,
-          pending: tours.length,
-        }))
+        await send(CHRONO_ADDRESS,  `[${getTimeString().slice(0, -3)} ${rand(0)} ${rand(1)} ${rand(2)} ${rand(3)}]`)
         break;
       case REPEAT:
         if (tours.length) await send(CHRONO_ADDRESS, tours[0])
@@ -113,6 +110,8 @@ const send = async (address, message) => {
   })
 }
 
+const rand = (i) => Math.floor(Math.sin((timestamp / 9000 + i) * Math.PI / 2) * 49 + 49).toString().padStart(2, '0')
+
 export async function init() {
   return new Promise((resolve, reject) => {
     socket.once('error', reject)
@@ -129,7 +128,7 @@ export async function addTour(tour, now) {
 export function getTimestamp() { return timestamp }
 
 export function getTimeString(t = timestamp) {
-  let str = String(t).slice(-3)
+  let str = String(t % 1000).padStart(3, '0')
   t = Math.floor(t / 1000)
   for (const sep of `"':`) {
     str = String(t % 60).padStart(2, '0') + sep + str

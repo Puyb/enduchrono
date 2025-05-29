@@ -4,10 +4,11 @@ const fs = require('node:fs/promises')
 const path = require('path')
 const Knex = require('knex')
 
-const DIR = './data'
+const DIR = path.join(__dirname, './data')
 const CURRENT_FILENAME = path.join(DIR, 'current.db')
 
 const openOrCreate = async () => {
+  console.log('openOrCreate');
   if (await exists(CURRENT_FILENAME)) return open(CURRENT_FILENAME)
   const filename = path.join(DIR, `${(new Date()).toISOString()}.db`)
   const knex = await open(filename)
@@ -46,8 +47,10 @@ const createDb = async () => {
 }
 
 const closeDb = async () => {
+  console.log('closeDb')
   currentKnexPromise = null
   await fs.rm(CURRENT_FILENAME)
+  console.log('closed')
 }
 
 const getPassages = async (from) => {

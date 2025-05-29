@@ -6,11 +6,11 @@
           <b-col cols="8">
             <b-button-toolbar>
               <b-button-group size="sm">
-                <b-button :variant="selection=='toursAll' ? 'info' : ''" @click="selection = 'toursAll'">Tous <b-badge pill>{{ toursAll.length }}</b-badge></b-button>
-                <b-button :variant="selection=='toursNormaux' ? 'info' : ''" @click="selection = 'toursNormaux'">Normaux <b-badge pill>{{ toursNormaux.length }}</b-badge></b-button>
-                <b-button :variant="selection=='toursDuplicate' ? 'info' : ''" @click="selection = 'toursDuplicate'">Dupliqués <b-badge pill>{{ toursDuplicate.length }}</b-badge></b-button>
-                <b-button :variant="selection=='toursDeleted' ? 'info' : ''" @click="selection = 'toursDeleted'">Supprimés <b-badge pill>{{ toursDeleted.length }}</b-badge></b-button>
-                <b-button :variant="selection=='toursUnknown' ? 'info' : ''" @click="selection = 'toursUnknown'">Inconnus <b-badge pill>{{ toursUnknown.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursAll' ? 'info' : ''" @click="selection = 'toursAll'">Tous <b-badge pill variant="light">{{ toursAll.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursNormaux' ? 'info' : ''" @click="selection = 'toursNormaux'">Normaux <b-badge pill variant="light">{{ toursNormaux.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursDuplicate' ? 'info' : ''" @click="selection = 'toursDuplicate'">Dupliqués <b-badge pill variant="light">{{ toursDuplicate.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursDeleted' ? 'info' : ''" @click="selection = 'toursDeleted'">Supprimés <b-badge pill variant="light">{{ toursDeleted.length }}</b-badge></b-button>
+                <b-button :variant="selection=='toursUnknown' ? 'info' : ''" @click="selection = 'toursUnknown'">Inconnus <b-badge pill variant="light">{{ toursUnknown.length }}</b-badge></b-button>
               </b-button-group>
               <b-input-group size="sm">
                 <b-form-input v-model="search" placeholder="Recherche"></b-form-input>
@@ -34,12 +34,11 @@
     </div>
     <div class="d-flex flex-column flex-fill" style="overflow: scroll; position: relative;">
       <ToursTable :tours="toursSelected" :fields="fields" :perPage="perPage" :currentPage="currentPage"/>
-      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { formatTime, formatDuree } from '../utils'
 import ToursTable from './ToursTable.vue'
 export default {
   name: 'Tours',
@@ -67,12 +66,10 @@ export default {
         {
           key: 'timestamp',
           sortable: true,
-          formatter: formatTime
         },
         {
           key: 'duree',
           sortable: true,
-          formatter: formatDuree
         },
         {
           key: 'equipe',

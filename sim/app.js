@@ -20,12 +20,14 @@ module.exports = async function(fastify, opts) {
       const listen = (obj, event, cb) => {
         obj.on(event, cb)
         websocket.on('close', () => {
+          try {
           obj.removeListener(event, cb)
+          } catch(err) { console.error('websocket close', err) }
         })
       }
       send = async data => {
         try {
-          console.log('sending to websocket', JSON.stringify(data))
+          // console.log('sending to websocket', JSON.stringify(data))
 
           await websocket.send(JSON.stringify(data))
         } catch (err) {

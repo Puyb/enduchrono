@@ -1,184 +1,20 @@
 'use strict'
 import _ from 'lodash'
-import fs from 'node:fs/promises'
-import { exists } from './utils.js'
-import path from 'path'
-import Knex from 'knex'
-import klasses from './classes.js'
-export const { Equipe, Equipier, Tour, Transpondeur, tours, transpondeurs, equipes, equipiers, categories } = klasses
+import { AsyncEventEmitter } from './utils.js'
+import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS } from './classes.js'
+import { getKnex } from './sql.js'
 
 export const DUPLICATE_WINDOW_PERIOD = 60000 * 2
 export const COURSE_DUREE = 6 * 3600 * 1000
 
-const DIR = './data'
-const CURRENT_FILENAME = path.join(DIR, 'current.db')
-
-export const STATUS = ['TEST', 'DEPART', 'COURSE', 'FIN']
-
-let knex
-export async function list() {
-  const files = await fs.readdir(DIR)
-  return files.filter(name => name.endsWith('.db') && name !== 'current.db')
-}
-
-export async function open(filename) {
-  if (filename) {
-    await close()
-    await fs.symlink(filename, CURRENT_FILENAME)
-  }
-  if (!await exists(CURRENT_FILENAME)) return null
-  knex = Knex({
-    client: 'sqlite3',
-    connection: {
-      filename: CURRENT_FILENAME
-    },
-    useNullAsDefault: true,
-  })
-  await load()
-  emit('open')
-}
-
-export async function create(name) {
-  if (await exists(CURRENT_FILENAME)) throw new Error('current file link already exists')
-  const filename = path.join(DIR, `${name.replace(/[^a-z0-9.()-]+/gi, '_')}.db`)
-  knex = Knex({
-    client: 'sqlite3',
-    connection: { filename },
-    useNullAsDefault: true,
-  })
-  await fs.symlink(filename, CURRENT_FILENAME)
-  await initDb()
-  await knex.insert({ name }).into('course')
-}
-
-export async function close() {
-  if (knex) await knex.destroy()
-  if (await exists(CURRENT_FILENAME)) await fs.rm(CURRENT_FILENAME)
-  knex = null
-  emit('close')
-}
-  
-export function getKnex() { return  knex }
 let status = STATUS[0]
 
-export async function initDb() {
-  if (!await knex.schema.hasTable('equipes')) {
-    await knex.schema.createTable('course', (table) => {
-      table.string('name')
-      table.string('status').default(STATUS[0])
-    })
-    await knex.schema.createTable('equipes', (table) => {
-      table.integer('equipe')
-      table.string('nom')
-      table.string('categorie')
-      table.string('gerant_nom')
-      table.string('gerant_prenom')
-      table.string('gerant_ville')
-      table.string('gerant_code_postal')
-      table.string('gerant_code_pays')
-      table.integer('penalite').defaultTo(0)
-      table.boolean('deleted')
-      table.unique(['equipe'])
-    })
-    await knex.schema.createTable('equipiers', (table) => {
-      table.integer('equipe')
-      table.integer('dossard')
-      table.string('nom')
-      table.string('prenom')
-      table.string('sexe')
-      table.string('date_de_naissance')
-      table.string('num_licence')
-      table.foreign('equipe').references('equipe').inTable('equipes')
-      table.index(['equipe'])
-      table.boolean('deleted')
-      table.unique(['dossard'])
-    })
-    await knex.schema.createTable('transpondeurs', (table) => {
-      table.integer('dossard').nullable()
-      table.string('id')
-      table.boolean('deleted')
-      table.boolean('vu').defaultTo(false)
-      table.integer('battery').nullable().defaultTo(null)
-      table.foreign('dossard').references('dossard').inTable('equipiers')
-      table.index(['dossard'])
-      table.unique(['id'])
-    })
-    await knex.schema.createTable('tours', (table) => {
-      table.increments('id')
-      table.integer('numero')
-      table.string('transpondeur')
-      table.integer('dossard').nullable()
-      table.integer('timestamp')
-      table.string('source')
-      table.string('status').nullable().default(null) // null, deleted, duplicate, ignore
-      table.boolean('deleted', false)
-      table.unique(['id'])
-      table.foreign('dossard').references('dossard').inTable('equipiers')
-      table.index(['dossard'])
-    })
-    await knex.schema.createTable('log', (table) => {
-        table.integer('timestamp')
-        table.string('table')
-        table.string('values')
-    });
-  }
-}
+export const events = new AsyncEventEmitter();
 
-const clear = object => { for (const key of Object.keys(object)) delete object[key] }
-
-export async function reset() {
-  tours.length = 0
-  clear(transpondeurs)
-  clear(equipes)
-  clear(equipiers)
-  clear(categories)
-  categories.general = []
-  await knex('transpondeurs').delete()
-  await knex('tours').delete()
-  await knex('equipiers').delete()
-  await knex('equipes').delete()
-}
-
-export async function loadRows(klass, onRow) {
-  const rows = await knex.select('*').from(klass.table)
-  for (const row of rows) {
-    const instance = new klass(row)
-    klasses[klass.table][instance[klass.key]] = instance
-    if (onRow) onRow(instance)
-  }
-}
-
-export async function load() {
-  await loadRows(Equipe, equipe => {
-    categories.general.push(equipe)
-    categories[equipe.categorie] = categories[equipe.categorie] || []
-    categories[equipe.categorie].push(equipe)
-  })
-  await loadRows(Equipier)
-  await loadRows(Transpondeur, transpondeur => {
-    if (equipiers[transpondeur.dossard]) {
-      equipiers[transpondeur.dossard].transpondeurs.push(transpondeur)
-    }
-  })
-  const tourRows = await knex.select('*').from('tours').orderBy('timestamp')
-  for (const tourRow of tourRows) {
-    const tour = new Tour(tourRow)
-    tours.push(tour)
-    if (!tour.dossard) continue
-
-    const equipier = equipiers[tour.dossard]
-    if (!equipier) {
-        tour.dossard = null
-        continue;
-    }
-    const equipe = equipes[equipier.equipe]
-    if (!tour.status) {
-      equipier.tours += 1
-      equipier.timestamp = tour.timestamp
-      equipe.tours.push(tour)
-      equipe.temps = tour.timestamp
-    }
-  }
+export async function initModel() {
+  const knex = getKnex()
+  const [courseRow] = await knex.select('*').from('course')
+  status = courseRow.status;
   for (const equipe of Object.values(equipes)) {
     if (equipe.tours.length) {
       equipe._rank = rankValue(equipe)
@@ -189,18 +25,34 @@ export async function load() {
 }
 
 export async function addTranspondeur(transpondeur) {
+  console.log('transpondeur', transpondeur)
+  const previous = transpondeurs[transpondeur.id]
   transpondeurs[transpondeur.id] = transpondeur
-  await knex.insert(transpondeur).into('transpondeurs')
+  const knex = getKnex()
+  await knex.insert(transpondeur).into('transpondeurs').onConflict('id').merge()
+  events.emit('transpondeur', transpondeur)
+  if (previous?.dossard && previous.dossard !== transpondeur.dossard) {
+    const equipier = equipiers[previous.dossard]
+    if (equipier) {
+      _.remove(equipier.transpondeurs, previous)
+      events.emit('equipier', equipier)
+    }
+  }
+  if (!transpondeur.dossard) return
+  const equipier = equipiers[transpondeur.dossard]
+  _.remove(equipier.transpondeurs, previous)
+  equipier.transpondeurs.push(transpondeur)
+  events.emit('equipier', equipier)
 }
 
 export async function removeTranspondeur(id) {
   delete transpondeurs[id]
+  const knex = getKnex()
   await knex('transpondeurs').where({ id }).delete()
 }
 
-
 export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD) {
-  const lastTimestamp = _.last(equipe.tours?.timestamp)
+  const lastTimestamp = _.last(equipe.tours)?.timestamp
   if (lastTimestamp > COURSE_DUREE && timestamp >= lastTimestamp) return true
   return equipe.tours.some(tour => {
     return !tour.status && tour.timestamp < timestamp && timestamp < tour.timestamp + offset
@@ -208,29 +60,31 @@ export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD)
 }
 
 export async function insertTour(tour) {
+    const knex = getKnex()
     const [id] = await knex.insert(_.omit(tour, ['duree'])).into('tours')
     tour.id = id
-    tours.push(tour)
+    if (tour.timestamp < _.last(tours)?.timestamp) {
+      const pos = tours.findIndex(t => t.timestamp >= tour.timestamp)
+      tours.splice(pos, 0, tour)
+    } else {
+      tours.push(tour)
+    }
 }
 
-export async function addTour(id, transpondeur, timestamp, source = 'chrono') {
-  const tour = new Tour({ numero: id, transpondeur, dossard: null, timestamp, source, status: null })
-  if (status !== STATUS[2]) { // !course
+export async function addTour({ id, transpondeur = null, dossard = null, timestamp, source = 'chrono' }) {
+  const tour = new Tour({ numero: id, transpondeur, dossard, timestamp, source, status: null })
+  if (STATUS.indexOf(status) < 2) { // !course
     tour.status = 'ignore'
   }
-  if (!(transpondeur in transpondeurs)) {
-    await insertTour(tour)
+  if (!dossard && !(transpondeur in transpondeurs)) {
     await addTranspondeur({ id: transpondeur, dossard: null, deleted: false })
-    emit('tours', tour)
-    emit('transpondeur', { id: transpondeur })
-    return
   }
-  tour.dossard = transpondeurs[transpondeur]?.dossard
+  tour.dossard = transpondeurs[transpondeur]?.dossard || dossard
   const equipier = equipiers[tour.dossard]
   if (!equipier) {
     await insertTour(tour)
     tours.dossard = null
-    emit('tours', tour)
+    events.emit('tours', tour)
     return
   }
 
@@ -242,33 +96,33 @@ export async function addTour(id, transpondeur, timestamp, source = 'chrono') {
   await insertTour(tour)
   
   if (!tour.status) {
-    equipier.tours += 1
-    equipier.timestamp = Math.max(equipier.timestamp, timestamp)
-    if (_.last(equipe.tours)?.timestamp < timestamp) {
-      // ce tour est le plus récent, on l'ajoute à la fin
-      equipe.tours.push(tour)
-    } else {
-      // ce tour n'est pas le plus récent, il faut l'insérer au bon endroit
-      const index = _.findIndex(equipe.tours, tour => tour.timestamp > timestamp)
-      equipe.tours.splice(index, 0, tour)
-    }
-
-    equipe.temps = Math.max(equipe.temps, timestamp)
-    equipe._has_changed = true
-
-    equipe._rank = rankValue(equipe)
-
+    addTourToEquipe(equipe, tour)
     calculClassements(equipe)
   }
   return Promise.all([
-    notifyAndGetHasChanged(async equipe => emit('equipes', equipe)),
-    emit('tours', tour, equipe, equipier),
+    notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe)),
+    events.emit('tours', tour),
   ])[0]
 }
 
-const rankValue = equipe => -(equipe.tours.length + equipe.penalite) * 100 * 3600 * 1000 + (equipe.temps || 0)
+export const addTourToEquipe = (equipe, tour) => {
+  if (_.last(equipe.tours)?.timestamp < tour.timestamp) {
+    // ce tour est le plus récent, on l'ajoute à la fin
+    equipe.tours.push(tour)
+  } else {
+    // ce tour n'est pas le plus récent, il faut l'insérer au bon endroit
+    const index = _.findIndex(equipe.tours, t => t.timestamp > tour.timestamp)
+    equipe.tours.splice(index, 0, tour)
+  }
+  equipe.temps = Math.max(equipe.temps, tour.timestamp)
+  equipe._has_changed = true
+  equipe._rank = rankValue(equipe)
 
-const calculClassementCategory = categorie => {
+}
+
+export const rankValue = equipe => -(equipe.tours.length + equipe.penalite) * 100 * 3600 * 1000 + (equipe.temps || 0)
+
+export const calculClassementCategory = categorie => {
   categories[categorie].sort((a, b) => (a._rank || 0) - (b._rank || 0))
   const key = categorie === 'general' ? 'position_general' : 'position_categorie'
   for (const [position, equipe] of categories[categorie].entries()) {
@@ -277,7 +131,7 @@ const calculClassementCategory = categorie => {
   }
 }
 
-const calculClassements = (equipe = null) => {
+export const calculClassements = (equipe = null) => {
   for (const categorie of Object.keys(categories)) {
     if (categorie === 'general' || !equipe || categorie === equipe.categorie) {
       calculClassementCategory(categorie)
@@ -285,6 +139,7 @@ const calculClassements = (equipe = null) => {
   }
 }
 
+/*
 const updateClassement = (equipe, categoriesToUpdate = ['general', equipe.categorie]) => {
       console.log(categoriesToUpdate)
   for (const categorie of categoriesToUpdate) {
@@ -311,6 +166,7 @@ const updateClassement = (equipe, categoriesToUpdate = ['general', equipe.catego
     console.log(JSON.stringify(list, null, 2))
   }
 }
+*/
 
 export async function modifEquipe(id, values) {
   const equipe = equipes[id]
@@ -326,44 +182,43 @@ export async function modifEquipe(id, values) {
     calculClassementCategory(equipe.categorie)
   }
   equipe._has_changed = true
+  const knex = getKnex()
   await knex('equipes').where({ equipe: id }).update(values)
-  await notifyAndGetHasChanged(async equipe => emit('equipes', equipe))
+  await notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe))
 }
 
 export async function modifTour(id, deleted) {
   const tour = _.find(tours, t => t.id === id)
   if (!tour) return
-  if (![null, 'duplicated', 'deleted'].includes(tour.status)) return
+  console.log('modify', id, deleted, tour)
+  if (![null, 'duplicate', 'deleted'].includes(tour.status)) return
   if (tour.status === 'deleted' && deleted) return
-  if ([null, 'duplicated'].includes(tour.status) && !deleted) return
+  if (tour.status == null && !deleted) return
   tour.status = deleted ? 'deleted' : null
+  const knex = getKnex()
   await knex('tours').where({ id }).update({ status: tour.status })
   const equipier = equipiers[tour.dossard]
   const equipe = equipes[equipier?.equipe]
   if (tour.dossard && equipier && equipe) {
-    equipier.tours--
-    _.remove(equipe.tours, tour)
+    if (deleted) {
+      _.remove(equipe.tours, tour)
+    } else if (!_.find(equipe.tours, t => t === tour)) {
+      addTourToEquipe(equipe, tour)
+    }
+    equipe.temps = _.last(equipe.tours).timestamp
+    equipe._has_changed = true
+    equipe._rank = rankValue(equipe)
 
     calculClassements(equipe)
   }
   return Promise.all([
-    notifyAndGetHasChanged(async equipe => emit('equipes', equipe)),
-    emit('tours', tour, equipe, equipier, true),
+    notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe)),
+    events.emit('tours', tour, equipe, equipier, true),
   ])[0]
 }
 
 export async function deplaceEquipier(dossard, numero) {
 }
-
-// Async events
-const listeners = {
-}
-export function on(type, callback) {
-  if (!listeners[type]) listeners[type] = []
-  listeners[type].push(callback)
-}
-export function removeListener(type, callback) { _.pull(listeners[type], callback) }
-const emit = async (type, ...args) => listeners[type] && Promise.all(listeners[type].map(callback => callback(...args)))
 
 export async function notifyAndGetHasChanged(callback) {
   let changed = []
@@ -384,6 +239,7 @@ export function getLastTourNumero() {
 }
 
 export async function getCourseInfo() {
+  const knex = getKnex()
   if (!knex) return
   const info = (await knex.select('*').from('course'))[0]
   if (!info) return
@@ -408,12 +264,21 @@ export async function stopCourse() {
 }
 
 export async function changeStatus(_status) {
+  statusLock = false;
   status = _status
+  const knex = getKnex()
   await knex('course').update({ status });
-  emit('course', { status })
+  events.emit('course', { status })
+}
+
+let statusLock = false;
+export function lockStatus() {
+  statusLock = true;
 }
 
 export async function syncStatus(chronoStatus) {
+  if (statusLock) return
+  const knex = getKnex()
   if (!knex) return
   const index = STATUS.indexOf(status)
   if (chronoStatus === 'start') {
