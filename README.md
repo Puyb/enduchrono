@@ -26,7 +26,7 @@ Envoi en UDP des tours et simule le temps qui passe
 
 Prod avec simulateur:
 
-```docker-compose --profile prod up```
+```docker-compose --profile prod up --build```
 
 Interface sur http://localhost:3000/
 
