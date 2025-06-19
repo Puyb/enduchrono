@@ -32,6 +32,7 @@ export async function open(filename) {
   })
   await load()
   events.emit('open')
+  return knex
 }
 
 export async function create(name) {

@@ -24,8 +24,7 @@ module.exports = async function (fastify, opts) {
   })
 
   // open db
-  await open()
-  await initModel()
+  if (await open()) await initModel()
   // connect to chrono
   await connect()
   console.log('connected')

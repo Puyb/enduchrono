@@ -22,7 +22,7 @@ export default async function route(fastify, opts) {
         }
       }
     })
-    await models.load()
+    await sql.load()
     await start()
     await models.startTest()
 
