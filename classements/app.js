@@ -4,6 +4,7 @@ const path = require('path')
 const { open} = require('./sql')
 const { initModel, addTour, syncStatus } = require('./models')
 const { connect, events } = require('./tours')
+const { webConnect } = require('./send-web')
 
 module.exports = async function (fastify, opts) {
   fastify.register(require('fastify-file-upload'))
@@ -31,4 +32,5 @@ module.exports = async function (fastify, opts) {
   events.on('tour', data => console.log('tour', data))
   events.on('tour', data => addTour(data))
   events.on('status', ({ status }) => syncStatus(status)) 
+  await webConnect()
 }

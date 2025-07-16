@@ -52,7 +52,7 @@
       <h1>Ouvrir une course</h1>
       <b-button @click="openCourse(filename)" v-for="filename of $store.state.filenames" :key="filename">{{filename}}</b-button>
     </div>
-    <b-modal v-model="showError" hide-footer hide-header>
+    <b-modal v-model="showError" hide-footer hide-header no-close-on-backdrop>
       Error {{ $store.state.error }}
       <b-row>
         <b-col class="col-3">
@@ -87,16 +87,16 @@
       <b-row>
       </b-row>
     </b-modal>
-    <b-modal v-model="showDepart" title="Départ" @ok="startCourse" @cancel="startTest" ok-title="Départ" cancel-title="Mode test">
+    <b-modal v-model="showDepart" title="Départ" @ok="startCourse" @cancel="startTest" ok-title="Départ" cancel-title="Mode test" no-close-on-backdrop>
       <template #default="{}">
         Démarrer la course ?
       </template>
       <template #modal-footer="{}">
-        <b-button size="sm" variant="success" @click="startCourse()">
-          Départ
-        </b-button>
         <b-button size="sm" variant="secondary" @click="startTest()">
           Mode test
+        </b-button>
+        <b-button size="sm" variant="success" @click="startCourse()">
+          Départ
         </b-button>
         <b-button size="sm" variant="danger" @click="closeCourse()">
           Fermer la course

@@ -1,5 +1,5 @@
 {
-  "name": "sim-ui",
+  "name": "web-ui",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,6 +13,7 @@
     "chart.js": "^3.9.1",
     "core-js": "^3.6.4",
     "vue": "^2.6.11",
+    "vue-html-to-paper": "^1.4.5",
     "vue-chartjs": "^4.1.2",
     "vue-router": "^3.6.5",
     "vuex": "^3.1.3"

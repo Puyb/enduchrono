@@ -14,7 +14,7 @@
           <b-td :class="transpondeur.deleted ? 'deleted' : ''">{{ transpondeur.id }}</b-td>
           <b-td>{{ tours(transpondeur).length }}</b-td>
           <b-td>{{ lastSeen(transpondeur) }}</b-td>
-          <b-td><b-button :variant="transpondeur.deleted ? 'success' : 'danger'" @click="remove(transpondeur)"><b-icon-power /></b-button></b-td>
+          <b-td><b-button :variant="transpondeur.deleted ? 'success' : 'danger'" :title="transpondeur.deleted ? 'Activer' : 'Désactiver'" @click="remove(transpondeur)"><b-icon-power /></b-button></b-td>
         </b-tr>
         <b-tr>
           <b-td><b-input placeholder="ID transpondeur" v-model="newTranspondeur" /></b-td>
@@ -64,7 +64,8 @@ export default {
     },
     async add() {
       if (!this.newTranspondeur) return
-      const exist = _.find(this.$store.state.transpondeurs, t => t === this.newTranspondeur)
+      const exist = _.find(this.$store.state.transpondeurs, t => t.id === this.newTranspondeur)
+      console.log('exist', exist)
       if (exist?.dossard) {
         const equipier = this.$store.state.equipiers[exist.dossard]
         if (!await this.$bvModal.msgBoxConfirm(`Ce transpondeur est déjà utilisé par ${equipier.dossard} ${equipier.nom} ${equipier.prenom}`, {
@@ -77,13 +78,16 @@ export default {
           return
         }
       }
-      const transpondeur =  exist || { id: this.newTranspondeur, dossard: this.equipier.dossard, deleted: false }
+      const transpondeur =  exist || { id: this.newTranspondeur, deleted: false }
+      transpondeur.dossard = this.equipier.dossard
       transpondeur.changed = true
       console.log('push', transpondeur)
       this.newTranspondeurs.push(transpondeur)
       this.newTranspondeur = ''
     },
     async onSubmit() {
+      if (this.newTranspondeur) await this.add();
+      console.log('newTranspondeurs', this.newTranspondeurs)
       await Promise.all(this.newTranspondeurs.map(async t => {
         console.log('t', t, t.changed)
         if (t.changed) {
@@ -98,5 +102,5 @@ export default {
 }
 </script>
 <style scoped>
-.deleted { text-decoration: strike-through; }
+.deleted { text-decoration: line-through; }
 </stype>

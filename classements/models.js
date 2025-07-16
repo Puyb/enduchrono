@@ -25,8 +25,8 @@ export async function initModel() {
 }
 
 export async function addTranspondeur(transpondeur) {
-  console.log('transpondeur', transpondeur)
   const previous = transpondeurs[transpondeur.id]
+  console.log('transpondeur', transpondeur, previous)
   transpondeurs[transpondeur.id] = transpondeur
   const knex = getKnex()
   await knex.insert(transpondeur).into('transpondeurs').onConflict('id').merge()
@@ -40,7 +40,7 @@ export async function addTranspondeur(transpondeur) {
   }
   if (!transpondeur.dossard) return
   const equipier = equipiers[transpondeur.dossard]
-  _.remove(equipier.transpondeurs, previous)
+  if (previous) _.remove(equipier.transpondeurs, previous)
   equipier.transpondeurs.push(transpondeur)
   events.emit('equipier', equipier)
 }
@@ -79,8 +79,11 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
   if (!dossard && !(transpondeur in transpondeurs)) {
     await addTranspondeur({ id: transpondeur, dossard: null, deleted: false })
   }
-  tour.dossard = transpondeurs[transpondeur]?.dossard || dossard
+  if (!transpondeurs[transpondeur]?.deleted) {
+    tour.dossard = transpondeurs[transpondeur]?.dossard || dossard
+  }
   const equipier = equipiers[tour.dossard]
+  console.log(equipier, transpondeurs[transpondeur])
   if (!equipier) {
     await insertTour(tour)
     tours.dossard = null
