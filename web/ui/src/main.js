@@ -37,7 +37,7 @@ new Vue({
           this.$store.state.course = data.course
           this.$store.state.equipes = data.equipes
         }
-        if (data.event === 'equipes') this.$store.state.equipes[data.equipe.equipe] = data.equipe
+        if (data.event === 'equipe') this.$store.state.equipes[data.equipe.equipe] = data.equipe
         if (data.event === 'course') this.$store.state.course = data.course
       })
       connection.addEventListener('close', (e) => {

@@ -88,11 +88,11 @@ new Vue({
                 Object.assign(this.$store.state.tours.find(t => t.id === event.tour.id), event.tour)
               } else {
                 const tours = this.$store.state.tours
-                if (tours[0]?.timestamp > event.tour.timestamp) {
-                  const pos = tours.findIndex(t => t.timestamp < event.tour.timestamp)
-                  tours.splice(pos + 1, 0, event.tour)
+                const pos = tours.findIndex(t => t.timestamp < event.tour.timestamp)
+                if (pos >= 0) {
+                  tours.splice(pos, 0, event.tour)
                 } else {
-                  tours.unshift(event.tour)
+                  tours.push(event.tour)
                 }
               }
             }

@@ -1,10 +1,5 @@
 'use strict'
-
-import Events from 'node:events'
-const events = new Events()
-
-let equipes = {}
-let course = {}
+import { events, equipes, course } from '../fetch-websocket.js'
 
 export default async function route(fastify, opts) {
   fastify.get('/input', { websocket: true }, async (websocket, req) => {
@@ -14,8 +9,8 @@ export default async function route(fastify, opts) {
       
       events.emit(data.event, data)
       if (data.event === 'init') {
-        equipes = data.equipes
-        course = data.course
+        Object.assign(equipes, data.equipes)
+        Object.assign(course, data.course)
       }
       if (data.event === 'equipes') {
         equipes[data.equipe.equipe] = data.equipe
@@ -39,7 +34,7 @@ export default async function route(fastify, opts) {
       equipes,
       course,
     })
-    events.on('equipes', send)
+    events.on('equipe', send)
 
     websocket.on('close', () => {
       events.removeListener('equipe', send);

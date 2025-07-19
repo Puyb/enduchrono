@@ -2,6 +2,8 @@
 
 const path = require('path')
 
+const { fetchConnect } = require('./fetch-websocket')
+
 module.exports = async function (fastify, opts) {
   fastify.register(require('@fastify/websocket'))
 
@@ -17,4 +19,6 @@ module.exports = async function (fastify, opts) {
   fastify.register(require('@fastify/static'), {
     root: path.join(__dirname, 'ui'),
   })
+
+  fetchConnect()
 }

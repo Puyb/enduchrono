@@ -8,7 +8,10 @@ import _ from 'lodash'
 
 export default async function route(fastify, opts) {
   fastify.get('/websockets/control', { websocket: true }, async (websocket, req) => {
+    const topics = req.query?.topics?.split(',') || ['course', 'categories', 'tours', 'equipes', 'equipiers', 'transpondeurs', 'filenames', 'status', 'connection']
+
     const listen = (obj, event, cb) => {
+      if (!topics.includes(event)) return
       obj.events.on(event, cb)
       websocket.on('close', () => {
         obj.events.removeListener(event, cb)
@@ -26,13 +29,15 @@ export default async function route(fastify, opts) {
       const course = await getCourseInfo()
       await send({
         event: 'init',
-        course,
-        categories: _.without(Object.keys(categories), 'general'),
-        tours,
-        equipes: _.mapValues(equipes, equipe => ({ ...equipe, tours: equipe.tours.length })),
-        equipiers,
-        transpondeurs: _.values(transpondeurs),
-        filenames: await sql.list(),
+        ..._.pick({
+          course,
+          categories: _.without(Object.keys(categories), 'general'),
+          tours,
+          equipes: _.mapValues(equipes, equipe => ({ ...equipe, tours: equipe.tours.length })),
+          equipiers,
+          transpondeurs: _.values(transpondeurs),
+          filenames: await sql.list(),
+        }, topics),
       })
     }
     sendInit()
