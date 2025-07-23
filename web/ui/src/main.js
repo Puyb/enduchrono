@@ -4,7 +4,6 @@ import { BootstrapVue } from 'bootstrap-vue'
 import VueRouter from 'vue-router'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
-import { last }  from 'lodash'
 import store from './store'
 Vue.use(BootstrapVue)
 Vue.use(VueRouter)
