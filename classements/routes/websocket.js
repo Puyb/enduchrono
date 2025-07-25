@@ -8,7 +8,7 @@ import _ from 'lodash'
 
 export default async function route(fastify, opts) {
   fastify.get('/websockets/control', { websocket: true }, async (websocket, req) => {
-    const topics = req.query?.topics?.split(',') || ['course', 'categories', 'tours', 'equipes', 'equipiers', 'transpondeurs', 'filenames', 'status', 'connection']
+    const topics = req.query?.topics?.split(',') || ['course', 'categories', 'tours', 'equipes', 'equipiers', 'equipier', 'transpondeurs', 'transpondeur', 'filenames', 'status', 'connection', 'open', 'close']
 
     const listen = (obj, event, cb) => {
       if (!topics.includes(event)) return
@@ -79,6 +79,7 @@ export default async function route(fastify, opts) {
       toursQueue.length = 0
       for (const key in equipesQueue) delete equipesQueue[key]
       for (const key in equipiersQueue) delete equipiersQueue[key]
+      for (const key in transpondeursQueue) delete transpondeursQueue[key]
     }
     websocket.on('close', emptyQueues)
   })

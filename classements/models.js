@@ -117,7 +117,7 @@ export const addTourToEquipe = (equipe, tour) => {
     const index = _.findIndex(equipe.tours, t => t.timestamp > tour.timestamp)
     equipe.tours.splice(index, 0, tour)
   }
-  equipe.temps = Math.max(equipe.temps, tour.timestamp)
+  equipe.temps = Math.max(equipe.temps || 0, tour.timestamp)
   equipe._has_changed = true
   equipe._rank = rankValue(equipe)
 

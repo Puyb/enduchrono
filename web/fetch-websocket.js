@@ -12,7 +12,7 @@ const BASE_URL = `${process.env.CLASSEMENTS_HOST || 'localhost'}:${process.env.C
 
 let ws
 export function fetchConnect() {
-  const wsUrl = `ws://${BASE_URL}/websockets/control?topics=equipes,course`
+  const wsUrl = `ws://${BASE_URL}/websockets/control?topics=equipes,course,open,close`
   ws = new WebSocket(wsUrl, {})
 
   ws.on('message', (message) => {
