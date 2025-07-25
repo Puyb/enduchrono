@@ -20,6 +20,8 @@ export default async function route(fastify, opts) {
     websocket.on('error', console.error)
     websocket.on('close', () => console.log('close'))
   })
+
+
   fastify.get('/data', { websocket: true }, async (websocket, req) => {
     const send = async data => {
       try {
@@ -35,6 +37,7 @@ export default async function route(fastify, opts) {
       course,
     })
     events.on('equipe', send)
+    events.on('init', send)
 
     websocket.on('close', () => {
       events.removeListener('equipe', send);

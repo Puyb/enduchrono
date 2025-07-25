@@ -3,7 +3,7 @@ import { exists, AsyncEventEmitter } from './utils.js'
 import path from 'path'
 import Knex from 'knex'
 import * as klasses from './classes.js'
-import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, categories, STATUS } from './classes.js'
+import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, categories, STATUS, reset } from './classes.js'
 
 const __dirname = import.meta.dirname;
 const DIR = path.join(__dirname, './data')
@@ -52,6 +52,7 @@ export async function close() {
   if (knex) await knex.destroy()
   if (await exists(CURRENT_FILENAME)) await fs.rm(CURRENT_FILENAME)
   knex = null
+  reset()
   events.emit('close')
 }
   
@@ -131,7 +132,7 @@ export async function loadRows(klass, onRow) {
 }
 
 export async function load() {
-  klasses.reset();
+  reset();
   await loadRows(Equipe, equipe => {
     categories.general.push(equipe)
     categories[equipe.categorie] = categories[equipe.categorie] || []

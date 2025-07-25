@@ -26,6 +26,8 @@ export default async function route(fastify, opts) {
     await start()
     await models.startTest()
 
+    sql.events.emit('open')
+
     reply.redirect(request.headers.referer)
   })
 }

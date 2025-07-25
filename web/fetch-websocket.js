@@ -19,7 +19,9 @@ export function fetchConnect() {
     const data = JSON.parse(message.toString())
     console.log('message', message.toString())
     if (data.event === 'init') {
-      events.emit(data.event, data)
+      events.emit(data.event, { course: {}, ...data })
+      for (const k of Object.keys(equipes)) delete equipes[k];
+      for (const k of Object.keys(course)) delete course[k];
       Object.assign(equipes, _.mapValues(data.equipes, formatEquipe))
       Object.assign(course, data.course)
     }

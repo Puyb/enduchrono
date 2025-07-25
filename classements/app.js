@@ -1,7 +1,7 @@
 'use strict'
 
 const path = require('path')
-const { open} = require('./sql')
+const { open } = require('./sql')
 const { initModel, addTour, syncStatus } = require('./models')
 const { connect, events } = require('./tours')
 
