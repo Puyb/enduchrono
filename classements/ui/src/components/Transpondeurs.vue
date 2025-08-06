@@ -122,10 +122,10 @@ export default {
       const words = this.search.toLowerCase().split(' ').filter(v => v)
       let transpondeurs =  this[this.selection]
       if (!words.length) return transpondeurs
-      return transpondeurs.filter(tour => {
-        const equipier = this.$store.state.equipiers[tour.dossard]
-        const equipe = this.$store.state.equipes[String(tour.dossard).slice(0, -1)]
-        const haystack = `${transpondeurs.id} ${tour.dossard} ${equipier?.nom} ${equipier?.prenom} ${equipe?.nom} ${equipe?.categorie}`.toLowerCase()
+      return transpondeurs.filter(transpondeur => {
+        const equipier = this.$store.state.equipiers[transpondeur.dossard]
+        const equipe = this.$store.state.equipes[String(transpondeur.dossard).slice(0, -1)]
+        const haystack = `${transpondeur.id} ${transpondeur.dossard} ${equipier?.nom} ${equipier?.prenom} ${equipe?.nom} ${equipe?.categorie}`.toLowerCase()
         return words.every(word => haystack.includes(word))
       })
     } 
