@@ -21,6 +21,10 @@ chrono.on('passage', async ({ transpondeur, timestamp }) => {
 })
 
 module.exports = async function(fastify, opts) {
+  // health endpoint (no side effects)
+  fastify.get('/', async () => {
+    return { status: 'ok' }
+  })
   fastify.register(require('@fastify/websocket'))
 
   fastify.post('/start', async function (request, reply) {

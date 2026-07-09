@@ -12,7 +12,7 @@ module.exports = async function(fastify, opts) {
     root: path.join(__dirname, 'ui'),
   })
 
-  let send
+  let send = async () => {}
 
   fastify.register(async function(_fastify) {
     _fastify.get('/ws', { websocket: true }, async (websocket, req) => {
@@ -69,6 +69,11 @@ module.exports = async function(fastify, opts) {
   })
   fastify.post('/disconnect', async (req, res) => {
     chrono.setConnected(false)
+  })
+
+  // Expose simulator state for tests (status, timing, queues, counters)
+  fastify.get('/status', async () => {
+    return chrono.getInfo()
   })
 
   await chrono.init()

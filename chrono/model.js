@@ -65,4 +65,3 @@ module.exports = {
   closeDb,
   async isOpened() { return exists(CURRENT_FILENAME) }
 }
-

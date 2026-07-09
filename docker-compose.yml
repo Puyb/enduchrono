@@ -27,6 +27,11 @@ services:
     ports:
       - 3001:3000
       - 2008:2008/udp
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 1s
+      retries: 15
     profiles:
       - prod
     
@@ -38,6 +43,11 @@ services:
       - SIMULATOR_ADDRESS=sim
     ports:
       - 3002:3000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/status').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 1s
+      retries: 15
     profiles:
       - prod
 
@@ -90,6 +100,23 @@ services:
       - CHRONELEC_ADDRESS=${CHRONELEC_ADDRESS:-sim-dev}
     ports:
       - 3001:3000
+    profiles:
+      - dev
+
+  chrono-test:
+    image: node:23
+    volumes:
+      - ./chrono:/app
+    working_dir: /app
+    command: bash -c "npm install && npm test"
+    environment:
+      - CHRONO_URL=http://chrono:3000
+      - SIM_URL=http://sim:3000
+    depends_on:
+      chrono-dev:
+        condition: service_started
+      sim-dev:
+        condition: service_started
     profiles:
       - dev
     
@@ -158,4 +185,3 @@ services:
       - 8082:8080
     profiles:
       - dev
-

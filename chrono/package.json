@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "fastify start -l info app.js",
-    "dev": "fastify start -w -l info --ignore-watch='data ui' -V -P app.js"
+    "test": "mocha test/**/*.test.js",
+    "start": "fastify start -l info -a 0.0.0.0 app.js",
+    "dev": "fastify start -w -l info -a 0.0.0.0 --ignore-watch='data ui' -V -P app.js"
   },
   "author": "Puyb",
   "license": "GPLv3",
@@ -15,7 +15,9 @@
     "eslint-config-standard": "^17.0.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-n": "^15.7.0",
-    "eslint-plugin-promise": "^6.1.1"
+    "eslint-plugin-promise": "^6.1.1",
+    "mocha": "^10.2.0",
+    "undici": "^6.19.8"
   },
   "dependencies": {
     "@fastify/websocket": "^11.0.2",
