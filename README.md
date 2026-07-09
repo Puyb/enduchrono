@@ -1,43 +1,51 @@
-# enduchrono
+# EnduChrono
 
-Système de chronometrage de course de roller
+Systeme de chronometrage pour course d'endurance roller.
 
-## chrono : App dialogant avec le chonometre
+## Services
 
-Fait l'interface entre le service classement le materiel chronelec
-La communication avec chronelec se fait en UDP
-Les actions sont reçu en HTTP
-Les tours et le status sont envoyé en websocket
-Stockage des tours dans une base SQLite
-Rattrapage des tours en cas de déco avec chronelec ou avec classement
+- `sim` : simulateur Chronelec (UDP + API de pilotage)
+- `chrono` : acquisition UDP, persistence des passages, diffusion WebSocket
+- `classements` : logique metier (tours, doublons, classements, corrections)
+- `web` : diffusion publique simplifiee des classements
 
-## classement : App calculant le classement
+Flux principal :
 
-Coeur métier de la course
-Fait le rapprochement entre les tours et les equipes/équipier et calcul le classement
-Stock tout dans une base SQLite
+```text
+sim (UDP) <-> chrono <-> classements <-> web
+```
 
+## Lancer la plateforme
 
-## sim : App simulant le hardware chonelec
+Production (avec simulateur) :
 
-Envoi en UDP des tours et simule le temps qui passe
+```bash
+docker-compose --profile prod up --build
+```
 
-## Setup
+Developpement (auto-reload + UIs) :
 
-Prod avec simulateur:
+```bash
+docker-compose --profile dev up
+```
 
-```docker-compose --profile prod up --build```
+## URLs utiles (mode dev)
 
-Interface sur http://localhost:3000/
+APIs :
+- `http://localhost:3000` (`classements`)
+- `http://localhost:3001` (`chrono`)
+- `http://localhost:3002` (`sim`)
+- `http://localhost:3003` (`web`)
 
-Interface du simulateur sur http://localhost:3002/
+Interfaces :
+- `http://localhost:8080` (UI `classements`)
+- `http://localhost:8081` (UI `sim`)
+- `http://localhost:8082` (UI `web`)
 
-Mode dev (auto-reload /  rebuild) :
+## Documentation
 
-```docker-compose --profile dev up```
-
-Interface sur http://localhost:8080/
-
-Interface du simulateur sur http://localhost:8081/
-
+- Fonctionnel : `docs/specifications.md`
+- Architecture technique : `docs/architecture_technique.md`
+- Protocole UDP Chronelec (inference) : `CHRONELEC_UDP_PROTOCOL.md`
+- Rapport de conformite doc/code : `docs/rapport_conformite.md`
 

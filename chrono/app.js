@@ -20,6 +20,13 @@ chrono.on('passage', async ({ transpondeur, timestamp }) => {
   }
 })
 
+chrono.on('connection', ({ connected }) => {
+  if (!connected) return
+  chrono.repeat().catch(err => {
+    console.error('error requesting REPEAT after reconnect', err)
+  })
+})
+
 module.exports = async function(fastify, opts) {
   // health endpoint (no side effects)
   fastify.get('/', async () => {
