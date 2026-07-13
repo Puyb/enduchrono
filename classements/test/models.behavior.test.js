@@ -232,15 +232,15 @@ describe('models business behavior', () => {
 
       await models.modifTour(t1b.id, true)
 
-      expect(t1b.status).to.equal('deleted')
+      expect(t1b).to.have.a.property('status', 'deleted')
       expect(team1.tours.map(t => t.id)).to.deep.equal([101])
-      expect(team1.temps).to.equal(1000)
+      expect(team1).to.have.a.property('temps', 1000)
       expect(categories.general[0]).to.equal(team2)
-      expect(
-        db.state.updates.some(
-          update => update.table === 'tours' && update.where?.id === t1b.id && update.values.status === 'deleted',
-        ),
-      ).to.equal(true)
+      expect(db.state.updates).to.deep.include({
+        table: 'tours',
+        where: { id: t1b.id },
+        values: { status: 'deleted' },
+      })
     })
 
     it('restores a deleted lap, reinserts it, and recalculates ranking', async () => {
@@ -251,15 +251,15 @@ describe('models business behavior', () => {
 
       await models.modifTour(t1b.id, false)
 
-      expect(t1b.status).to.equal(null)
+      expect(t1b).to.have.a.property('status', null)
       expect(team1.tours.map(t => t.id)).to.deep.equal([101, 102])
-      expect(team1.temps).to.equal(2000)
+      expect(team1).to.have.a.property('temps', 2000)
       expect(categories.general[0]).to.equal(team1)
-      expect(
-        db.state.updates.some(
-          update => update.table === 'tours' && update.where?.id === t1b.id && update.values.status === null,
-        ),
-      ).to.equal(true)
+      expect(db.state.updates).to.deep.include({
+        table: 'tours',
+        where: { id: t1b.id },
+        values: { status: null },
+      })
     })
 
     it('ignores forbidden transitions without DB updates', async () => {
@@ -276,9 +276,9 @@ describe('models business behavior', () => {
       await models.modifTour(deleted.id, true)
       await models.modifTour(active.id, false)
 
-      expect(ignored.status).to.equal('ignore')
-      expect(deleted.status).to.equal('deleted')
-      expect(active.status).to.equal(null)
+      expect(ignored).to.have.a.property('status', 'ignore')
+      expect(deleted).to.have.a.property('status', 'deleted')
+      expect(active).to.have.a.property('status', null)
       expect(team.tours.map(t => t.id)).to.deep.equal([3])
       expect(db.state.updates).to.have.length(0)
     })
@@ -296,14 +296,14 @@ describe('models business behavior', () => {
 
       await models.modifEquipe(1, { penalite: -1 })
 
-      expect(team1.penalite).to.equal(-1)
-      expect(team1._rank).to.equal(rankValue(team1))
+      expect(team1).to.have.a.property('penalite', -1)
+      expect(team1).to.have.a.property('_rank', rankValue(team1))
       expect(categories.general[0]).to.equal(team2)
-      expect(
-        db.state.updates.some(
-          update => update.table === 'equipes' && update.where?.equipe === 1 && update.values.penalite === -1,
-        ),
-      ).to.equal(true)
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { penalite: -1 },
+      })
     })
 
     it('moves a team between categories and updates category positions', async () => {
@@ -318,16 +318,16 @@ describe('models business behavior', () => {
 
       await models.modifEquipe(1, { categorie: 'B' })
 
-      expect(team1.categorie).to.equal('B')
+      expect(team1).to.have.a.property('categorie', 'B')
       expect(categories.A.map(team => team.equipe)).to.deep.equal([2])
       expect(categories.B.map(team => team.equipe)).to.include.members([1, 3])
-      expect(team2.position_categorie).to.equal(1)
-      expect(team1.position_categorie).to.equal(1)
-      expect(
-        db.state.updates.some(
-          update => update.table === 'equipes' && update.where?.equipe === 1 && update.values.categorie === 'B',
-        ),
-      ).to.equal(true)
+      expect(team2).to.have.a.property('position_categorie', 1)
+      expect(team1).to.have.a.property('position_categorie', 1)
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { categorie: 'B' },
+      })
     })
   })
 
@@ -339,7 +339,7 @@ describe('models business behavior', () => {
       await models.syncStatus('start')
 
       expect(db.state.updates).to.have.length(0)
-      expect(emitStub.callCount).to.equal(0)
+      expect(emitStub).to.have.a.property('callCount', 0)
     })
 
     it('maps chrono start/stop to expected transitions', async () => {
@@ -391,11 +391,11 @@ describe('models business behavior', () => {
 
       const changed = await models.notifyAndGetHasChanged(callback)
 
-      expect(callback.callCount).to.equal(2)
+      expect(callback).to.have.a.property('callCount', 2)
       expect(changed.map(team => team.equipe)).to.have.members([1, 3])
-      expect(equipes[1]._has_changed).to.equal(false)
-      expect(equipes[2]._has_changed).to.equal(false)
-      expect(equipes[3]._has_changed).to.equal(false)
+      expect(equipes[1]).to.have.a.property('_has_changed', false)
+      expect(equipes[2]).to.have.a.property('_has_changed', false)
+      expect(equipes[3]).to.have.a.property('_has_changed', false)
     })
   })
 })
