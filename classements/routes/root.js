@@ -1,5 +1,6 @@
 'use strict'
-const { equipes, equipiers, transpondeurs, categories, modifEquipe } = require('../models')
+const { modifEquipe } = require('../models')
+const { equipes, equipiers, transpondeurs, categories } = require('../classes')
 
 module.exports = async function (fastify, opts) {
   fastify.get('/equipes', async function (request, reply) {
