@@ -175,6 +175,7 @@ export async function modifEquipe(id, values) {
   const equipe = equipes[id]
   if ('penalite' in values) {
     equipe.penalite = values.penalite
+    equipe._rank = rankValue(equipe)
     calculClassements(equipe)
   }
   if (values.categorie) {
@@ -236,6 +237,7 @@ export async function notifyAndGetHasChanged(callback) {
 
 export function getLastTourNumero() {
   const last = _.last(tours)
+  if (!last) return null
   if (status === 'TEST' && last?.status === 'ignore')  return last?.numero
   if (status !== 'TEST' && last?.status !== 'ignore')  return last?.numero
   return null

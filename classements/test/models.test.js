@@ -6,6 +6,7 @@ import chaiAsPromised from 'chai-as-promised'
 import sinonChai from 'sinon-chai'
 import _ from "lodash";
 import * as models from '../models.js'
+import * as sql from '../sql.js'
 import { isDuplicate, rankValue, calculClassementCategory, addTourToEquipe } from '../models.js'
 import { categories, tours } from '../classes.js'
 
@@ -42,14 +43,14 @@ describe('isDuplicate', function()  {
     expect(result).to.be.true
   })
 
-  it('should return false if a tour is already duplicated in the window', function()  {
-    team.tours = [{ timestamp: 500, status: null }, { timestamp: 900, status: 'duplicated' }]
+  it('should return false if only duplicate tours are found in the window', function()  {
+    team.tours = [{ timestamp: 500, status: null }, { timestamp: 900, status: 'duplicate' }]
     const result = isDuplicate(1200, team, DUPLICATE_WINDOW_PERIOD)
     expect(result).to.be.false
   })
 
-  it('should return false if a tour is already duplicated in the window', function()  {
-    team.tours = [{ timestamp: 800, status: null }, { timestamp: 900, status: 'duplicated' }]
+  it('should return true when a valid previous tour exists in the window', function()  {
+    team.tours = [{ timestamp: 800, status: null }, { timestamp: 900, status: 'duplicate' }]
     const result = isDuplicate(1200, team, DUPLICATE_WINDOW_PERIOD)
     expect(result).to.be.true
   })
@@ -78,7 +79,7 @@ describe('rankValue', function() {
     const equipe2 = { tours: [1, 2, 3], temps: 12345, penalite: 0 }
     expect(rankValue(equipe1)).to.be.below(rankValue(equipe2))
   })
-  it('should return a smaller value for the team with the samllest timestamp if both teams have the same number of laps', function() {
+  it('should return a smaller value for the team with the smallest timestamp if both teams have the same number of laps', function() {
     const equipe1 = { tours: [1, 2, 3], temps: 12344, penalite: 0 }
     const equipe2 = { tours: [1, 2, 3], temps: 12345, penalite: 0 }
     expect(rankValue(equipe1)).to.be.below(rankValue(equipe2))
@@ -128,17 +129,17 @@ describe('calculClassementCategory', () => {
     expect(categories.general[2]).to.have.property('position_general', 3)
   })
 
-  it('should not assign a position to teams without laps', () => {
+  it('should not assign position_categorie to SNX teams without laps', () => {
     calculClassementCategory('SNX')
 
     const unrankedTeam = categories.SNX.find(team => team.tours.length === 0)
     expect(unrankedTeam).to.not.have.property('position_categorie')
   })
 
-  it('should not assign a position to teams without laps', () => {
+  it('should not assign position_general to general teams without laps', () => {
     calculClassementCategory('general')
 
-    const unrankedTeam = categories.SNX.find(team => team.tours.length === 0)
+    const unrankedTeam = categories.general.find(team => team.tours.length === 0)
     expect(unrankedTeam).to.not.have.property('position_general')
   })
 })
@@ -216,7 +217,7 @@ describe('insertTour', () => {
     knex.into = sinon.stub().resolves([42]) // id retourné
 
     // Simuler les dépendances globales
-    models.setKnex(knex)
+    sql.setKnex(knex)
     tours.length = 0
   })
 
@@ -286,4 +287,3 @@ describe('insertTour', () => {
     tours.map(t => t.name).should.deep.equal(['Tour A', 'Tour B', 'Tour C'])
   })
 })
-

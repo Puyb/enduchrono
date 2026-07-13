@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { Equipe, Tour, equipes } from '../classes.js'; // Remplace par le bon chemin
+import { Equipe, Tour, equipes } from '../classes.js';
 
 describe('Equipe - addMonitoredValue', () => {
   let equipe;
@@ -56,8 +56,8 @@ describe('Tour - duree', () => {
     expect(equipe.tours[1].duree).to.equal(1000)
   })
 
-  it('should return null for duration if the tour is not valid', () => {
-    equipe.tours[1].status = true;  // Marquer le tour précédent comme terminé
+  it('should return null for duration if the tour status is deleted', () => {
+    equipe.tours[1].status = 'deleted'
 
     expect(equipe.tours[1].duree).to.equal(null)
   })
@@ -77,16 +77,14 @@ describe('Tour - duree', () => {
     equipe.tours.push(new Tour({ dossard: 13, timestamp: 5000 }))
 
 
-    // Le précédent tour est terminé, donc la durée sera calculée à partir de 1000
     expect(equipe.tours[4].duree).to.equal(4000)
   })
 
-  it('should return null for duration if all previous tours are finished', () => {
-    equipe.tours[0].status = 'ignored'
-    equipe.tours[1].status = 'duplicated'
+  it('should compute duration from race start when all previous tours are non-counting', () => {
+    equipe.tours[0].status = 'ignore'
+    equipe.tours[1].status = 'duplicate'
     equipe.tours.push(new Tour({ dossard: 11, timestamp: 3000 }))
     expect(equipe.tours[2].duree).to.equal(3000)
   })
 
 })
-
