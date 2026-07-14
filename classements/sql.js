@@ -1,28 +1,45 @@
 import fs from 'node:fs/promises'
-import { exists, AsyncEventEmitter } from './utils.js'
+import { AsyncEventEmitter } from './utils.js'
 import path from 'path'
 import Knex from 'knex'
 import * as klasses from './classes.js'
 import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, categories, STATUS, reset } from './classes.js'
 
 const __dirname = import.meta.dirname;
-const DIR = path.join(__dirname, './data')
-const CURRENT_FILENAME = path.join(DIR, 'current.db')
+const DEFAULT_DIR = path.join(__dirname, './data')
+
+const getDir = () => process.env.CLASSEMENTS_DATA_DIR || DEFAULT_DIR
+const getCurrentFilename = () => path.join(getDir(), 'current.db')
+
+async function entryExists(filename) {
+  try {
+    await fs.lstat(filename)
+    return true
+  } catch (err) {
+    if (err.code === 'ENOENT') return false
+    throw err
+  }
+}
 
 export const events = new AsyncEventEmitter();
 
 let knex
 export async function list() {
+  const DIR = getDir()
+  await fs.mkdir(DIR, { recursive: true })
   const files = await fs.readdir(DIR)
   return files.filter(name => name.endsWith('.db') && name !== 'current.db')
 }
 
 export async function open(filename) {
+  const DIR = getDir()
+  const CURRENT_FILENAME = getCurrentFilename()
   if (filename) {
     await close()
+    await fs.mkdir(DIR, { recursive: true })
     await fs.symlink(path.resolve(DIR, filename), CURRENT_FILENAME)
   }
-  if (!await exists(CURRENT_FILENAME)) return null
+  if (!await entryExists(CURRENT_FILENAME)) return null
   knex = Knex({
     client: 'sqlite3',
     connection: {
@@ -36,7 +53,10 @@ export async function open(filename) {
 }
 
 export async function create(name) {
-  if (await exists(CURRENT_FILENAME)) throw new Error('current file link already exists')
+  const DIR = getDir()
+  const CURRENT_FILENAME = getCurrentFilename()
+  await fs.mkdir(DIR, { recursive: true })
+  if (await entryExists(CURRENT_FILENAME)) throw new Error('current file link already exists')
   const filename = path.join(DIR, `${name.replace(/[^a-z0-9.()-]+/gi, '_')}.db`)
   knex = Knex({
     client: 'sqlite3',
@@ -49,8 +69,9 @@ export async function create(name) {
 }
 
 export async function close() {
+  const CURRENT_FILENAME = getCurrentFilename()
   if (knex) await knex.destroy()
-  if (await exists(CURRENT_FILENAME)) await fs.rm(CURRENT_FILENAME)
+  if (await entryExists(CURRENT_FILENAME)) await fs.rm(CURRENT_FILENAME)
   knex = null
   reset()
   events.emit('close')
@@ -162,4 +183,3 @@ export async function load() {
     }
   }
 }
-
