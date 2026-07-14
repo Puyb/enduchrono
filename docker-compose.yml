@@ -77,6 +77,12 @@ services:
       - WEB_TOKEN=${WEB_TOKEN:-token}
     ports:
       - 3000:3000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/equipes').then(r=>{if(r.status>=500)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 20s
     profiles:
       - dev
 
@@ -100,6 +106,12 @@ services:
       - CHRONELEC_ADDRESS=${CHRONELEC_ADDRESS:-sim-dev}
     ports:
       - 3001:3000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 20s
     profiles:
       - dev
 
@@ -131,6 +143,12 @@ services:
       - SIMULATOR_ADDRESS=sim-dev
     ports:
       - 3002:3000
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/status').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
+      start_period: 20s
     profiles:
       - dev
 
@@ -152,11 +170,94 @@ services:
     volumes:
       - ./classements/ui:/app
     working_dir: /app
-    command: bash -c "npm install && npm run serve"
+    command: bash -c "npm install && npm run serve -- --host 0.0.0.0 --disable-host-check"
     environment:
       - NODE_OPTIONS=--openssl-legacy-provider
+      - DANGEROUSLY_DISABLE_HOST_CHECK=true
+      - VUE_APP_API_BASE_URL=http://classements-dev:3000
     ports:
       - 8080:8080
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 90
+      start_period: 20s
+    profiles:
+      - dev
+
+  classements-ui-test:
+    image: node:23
+    volumes:
+      - ./classements/ui:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run test:unit && npm run test:integration"
+    profiles:
+      - dev
+
+  classements-ui-e2e-smoke:
+    image: mcr.microsoft.com/playwright:v1.61.1-jammy
+    volumes:
+      - ./classements/ui:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run test:e2e:smoke"
+    environment:
+      - CLASSEMENTS_API_URL=http://classements-dev:3000
+      - CLASSEMENTS_UI_URL=http://classements-ui:8080
+    shm_size: 1gb
+    depends_on:
+      classements-dev:
+        condition: service_healthy
+      classements-ui:
+        condition: service_healthy
+      chrono-dev:
+        condition: service_healthy
+      sim-dev:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  classements-ui-e2e-core:
+    image: mcr.microsoft.com/playwright:v1.61.1-jammy
+    volumes:
+      - ./classements/ui:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run test:e2e:core"
+    environment:
+      - CLASSEMENTS_API_URL=http://classements-dev:3000
+      - CLASSEMENTS_UI_URL=http://classements-ui:8080
+    shm_size: 1gb
+    depends_on:
+      classements-dev:
+        condition: service_healthy
+      classements-ui:
+        condition: service_healthy
+      chrono-dev:
+        condition: service_healthy
+      sim-dev:
+        condition: service_healthy
+    profiles:
+      - dev
+
+  classements-ui-e2e:
+    image: mcr.microsoft.com/playwright:v1.61.1-jammy
+    volumes:
+      - ./classements/ui:/app
+    working_dir: /app
+    command: bash -c "npm install && npm run test:e2e"
+    environment:
+      - CLASSEMENTS_API_URL=http://classements-dev:3000
+      - CLASSEMENTS_UI_URL=http://classements-ui:8080
+    shm_size: 1gb
+    depends_on:
+      classements-dev:
+        condition: service_healthy
+      classements-ui:
+        condition: service_healthy
+      chrono-dev:
+        condition: service_healthy
+      sim-dev:
+        condition: service_healthy
     profiles:
       - dev
 

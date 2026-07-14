@@ -45,8 +45,9 @@ new Vue({
 
   mounted(){
     console.log('mounted', new Date())
-    this.URL = location.origin
-    if (window.webpackHotUpdate) { // dev mode
+    const configuredApiUrl = process.env.VUE_APP_API_BASE_URL
+    this.URL = configuredApiUrl || location.origin
+    if (!configuredApiUrl && window.webpackHotUpdate) { // dev mode
       this.URL = this.URL.replace(':8080', ':3000')
     }
     this.$store.state.URL = this.URL
