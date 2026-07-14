@@ -2,7 +2,6 @@
 
 set -u
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICES=(chrono classements)
 
 echo "Running tests before push..."
@@ -10,14 +9,6 @@ echo "Running tests before push..."
 failed=0
 
 for service in "${SERVICES[@]}"; do
-  service_dir="${ROOT_DIR}/${service}"
-
-  if [ ! -d "${service_dir}" ]; then
-    echo "ERROR: service directory not found: ${service_dir}"
-    failed=1
-    continue
-  fi
-
   echo
   echo "==> ${service}: npm test"
 

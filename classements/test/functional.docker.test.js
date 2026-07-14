@@ -12,20 +12,14 @@ const CONTROL_WS_URL = CLASSEMENTS_URL.replace(/^http/, 'ws') + '/websockets/con
 const DUPLICATE_WINDOW_PERIOD = 2 * 60 * 1000
 const COURSE_DUREE = 6 * 3600 * 1000
 
-const promiseTimeout = (prom, timeout, label = 'operation') => {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`timeout waiting for ${label}`)), timeout)
-    Promise.resolve(prom).then(
-      value => {
-        clearTimeout(timer)
-        resolve(value)
-      },
-      err => {
-        clearTimeout(timer)
-        reject(err)
-      },
-    )
-  })
+const promiseTimeout = async (prom, timeout, label = 'operation') => {
+  const ac = new AbortController()
+  const value = await Promise.race([
+    prom,
+    delay(timeout, undefined, ac).then(() => { throw new Error(`timeout waiting for ${label}`); })
+  ])
+  ac.abort();
+  return value;
 }
 
 async function waitFor(check, options = {}) {
