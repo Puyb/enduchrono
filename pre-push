@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+set -u
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICES=(chrono classements)
+
+echo "Running tests before push..."
+
+failed=0
+
+for service in "${SERVICES[@]}"; do
+  service_dir="${ROOT_DIR}/${service}"
+
+  if [ ! -d "${service_dir}" ]; then
+    echo "ERROR: service directory not found: ${service_dir}"
+    failed=1
+    continue
+  fi
+
+  echo
+  echo "==> ${service}: npm test"
+
+  if ! (docker compose --profile dev up ${service}-test); then
+    echo "ERROR: tests failed in ${service}"
+    failed=1
+  fi
+done
+
+if [ "${failed}" -ne 0 ]; then
+  echo
+  echo "Push blocked: at least one service test suite failed."
+  exit 1
+fi
+
+echo
+echo "All service tests passed. Push allowed."
+exit 0
