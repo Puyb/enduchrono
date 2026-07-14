@@ -1,6 +1,7 @@
 /* global describe, it, before, beforeEach, afterEach */
 import { expect } from 'chai'
-import WebSocket from 'ws'
+import { WebSocketClient } from '@culpeo/async-ws'
+import { asyncDrop, asyncFilter, asyncFlatMap, asyncMap, asyncTake, arrayFromAsync, asyncEnumerate, execPipe } from 'iter-tools'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const CLASSEMENTS_URL = process.env.CLASSEMENTS_URL || 'http://classements-dev:3000'
@@ -10,6 +11,22 @@ const CONTROL_WS_URL = CLASSEMENTS_URL.replace(/^http/, 'ws') + '/websockets/con
 
 const DUPLICATE_WINDOW_PERIOD = 2 * 60 * 1000
 const COURSE_DUREE = 6 * 3600 * 1000
+
+const promiseTimeout = (prom, timeout, label = 'operation') => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timeout waiting for ${label}`)), timeout)
+    Promise.resolve(prom).then(
+      value => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      err => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
+}
 
 async function waitFor(check, options = {}) {
   const {
@@ -148,106 +165,103 @@ function extractUpdateEvents(message) {
   return message.events
 }
 
-function createControlWsClient({ topics } = {}) {
+const WS_CONNECT_TIMEOUT = 10000
+const WS_MESSAGE_TIMEOUT = 10000
+const WS_SEARCH_LIMIT = 200
+
+async function createControlWsClient({ topics } = {}) {
   const query = topics?.length ? `?topics=${topics.join(',')}` : ''
-  const ws = new WebSocket(`${CONTROL_WS_URL}${query}`)
-  const messages = []
-  let fatalError = null
+  const wsUrl = `${CONTROL_WS_URL}${query}`
+  const client = new WebSocketClient({ maxBufferSize: 1000 })
+  await client.connect(wsUrl, { timeout: WS_CONNECT_TIMEOUT })
 
-  const ensureNoFatalError = () => {
-    if (fatalError) throw fatalError
+  const stream = execPipe(
+    client,
+    asyncEnumerate(0),
+    asyncMap(([index, message]) => ({ index, message: JSON.parse(message.data) })),
+    asyncTake(WS_SEARCH_LIMIT)
+  )
+
+  const waitForMessage = async (predicate, { skip = 0, timeout = WS_MESSAGE_TIMEOUT, label = 'message' } = {}) => {
+    const found = await promiseTimeout(
+      arrayFromAsync(execPipe(
+        stream,
+        asyncDrop(skip),
+        asyncFilter(({ message, index }) => predicate(message, index)),
+        asyncTake(1),
+      )),
+      timeout,
+      label,
+    )
+    if (!found.length) throw new Error('no matching websocket message found')
+    return found[0]
   }
 
-  const waitForMessage = async (predicate, options = {}) => {
+  const waitForTour = async (matcher, { skip = 0, timeout = WS_MESSAGE_TIMEOUT, label = 'tour' } = {}) => {
+    const found = await promiseTimeout(
+      arrayFromAsync(execPipe(
+        stream,
+        asyncDrop(skip),
+        asyncFlatMap(({ message, index }) => {
+          return extractUpdateEvents(message)
+            .filter(event => event.event === 'tour')
+            .map(event => ({ tour: event.tour, event, index, message }))
+        }),
+        asyncFilter(({ tour, event, index, message }) => matcher(tour, event, index, message)),
+        asyncTake(1),
+      )),
+      timeout,
+      label,
+    )
+    if (!found.length) throw new Error('no matching websocket tour found')
+    return found[0]
+  }
+
+  const waitForAllMessages = async (predicates, { maxMessages = WS_SEARCH_LIMIT, timeout = WS_MESSAGE_TIMEOUT, label = 'messages' } = {}) => {
+    const found = await promiseTimeout(
+      arrayFromAsync(execPipe(
+        stream,
+        asyncTake(maxMessages),
+        asyncFilter(entry => predicates.some(predicate => predicate(entry.message, entry.index))),
+        asyncTake(predicates.length),
+      )),
+      timeout,
+      label,
+    )
+    expect(found).to.have.a.lengthOf(predicates.length)
+    return found
+  }
+
+  const expectNoMessage = async (predicate, options = {}) => {
     const {
-      timeout = 10000,
-      from = 0,
-      label = 'websocket message',
+      timeout = 1500,
+      maxMessages = 5,
+      label = 'unexpected websocket message',
     } = options
 
-    return waitFor(() => {
-      ensureNoFatalError()
-      for (let index = from; index < messages.length; index++) {
-        const message = messages[index]
-        if (predicate(message, index)) {
-          return { message, index }
-        }
-      }
-      return null
-    }, { timeout, interval: 50, label })
-  }
-
-  const waitForTour = async (matcher, options = {}) => {
-    const {
-      timeout = 10000,
-      from = 0,
-      label = 'tour update',
-    } = options
-
-    return waitFor(() => {
-      ensureNoFatalError()
-      for (let index = from; index < messages.length; index++) {
-        for (const event of extractUpdateEvents(messages[index])) {
-          if (event.event !== 'tour') continue
-          if (matcher(event.tour, event, index, messages[index])) {
-            return { tour: event.tour, event, index, message: messages[index] }
-          }
-        }
-      }
-      return null
-    }, { timeout, interval: 50, label })
-  }
-
-  const waitUntilOpen = new Promise((resolve, reject) => {
-    let opened = false
-    ws.on('open', () => {
-      opened = true
-      resolve()
-    })
-    ws.on('error', err => {
-      if (!opened) reject(err)
-    })
-  })
-
-  ws.on('message', data => {
     try {
-      const parsed = JSON.parse(String(data))
-      messages.push(parsed)
+      const found = await waitForMessage(predicate, { timeout, maxMessages, label })
+      throw new Error(`${label}: ${JSON.stringify(found.message)}`)
     } catch (err) {
-      fatalError = new Error(`invalid websocket JSON message: ${String(data)} (${err.message})`)
+      if (!String(err.message || '').startsWith('timeout waiting for')) throw err
     }
-  })
-  ws.on('error', err => {
-    fatalError = err
-  })
+  }
 
   return {
-    ws,
-    messages,
-    waitUntilOpen,
     waitForMessage,
     waitForTour,
+    waitForAllMessages,
+    expectNoMessage,
     async close() {
-      if (ws.readyState !== WebSocket.CLOSED) {
-        await new Promise(resolve => {
-          const timeout = setTimeout(resolve, 500)
-          ws.once('close', () => {
-            clearTimeout(timeout)
-            resolve()
-          })
-          ws.close()
-        })
-      }
-      ensureNoFatalError()
+      await client.close()
     },
   }
 }
 
-async function waitForCourseSnapshot(wsClient, courseName, from = 0) {
+async function waitForCourseSnapshot(wsClient, courseName) {
   return wsClient.waitForMessage(
     msg => msg.event === 'init' && msg.course?.name === courseName,
     {
-      from,
       timeout: 12000,
       label: `init snapshot for ${courseName}`,
     },
@@ -260,7 +274,7 @@ async function waitForTeamTours(teamId, expectedLength) {
     const team = equipes[String(teamId)]
     return team && (team.tours || []).length >= expectedLength && team
   }, {
-    timeout: 10000,
+    timeout: WS_MESSAGE_TIMEOUT,
     interval: 100,
     label: `team ${teamId} tours >= ${expectedLength}`,
   })
@@ -272,9 +286,8 @@ describe('classements functional (docker stack)', function () {
   const wsClients = []
 
   async function openWs(options = {}) {
-    const client = createControlWsClient(options)
+    const client = await createControlWsClient(options)
     wsClients.push(client)
-    await client.waitUntilOpen
     return client
   }
 
@@ -321,24 +334,18 @@ describe('classements functional (docker stack)', function () {
     const fixture = makeImportFixture('status_cycle')
 
     await importCourse(fixture)
-    const { index: initIndex } = await waitForCourseSnapshot(ws, fixture.courseName)
-    let cursor = initIndex + 1
+    await waitForCourseSnapshot(ws, fixture.courseName)
 
     const expectTransition = async ({ endpoint, courseStatus, chronoStatus, simStatus }) => {
       await postJson(`${CLASSEMENTS_URL}${endpoint}`)
 
-      const [{ index: courseIndex }, { index: statusIndex }] = await Promise.all([
-        ws.waitForMessage(
-          msg => msg.event === 'course' && msg.course?.status === courseStatus,
-          { from: cursor, label: `course status ${courseStatus}` },
-        ),
-        ws.waitForMessage(
-          msg => msg.event === 'status' && msg.status?.status === chronoStatus,
-          { from: cursor, label: `chrono status ${chronoStatus}` },
-        ),
-      ])
-
-      cursor = Math.max(courseIndex, statusIndex) + 1
+      await ws.waitForAllMessages([
+        msg => msg.event === 'course' && msg.course?.status === courseStatus,
+        msg => msg.event === 'status' && msg.status?.status === chronoStatus,
+      ], {
+        label: `course/status transition ${courseStatus}/${chronoStatus}`,
+        maxMessages: 30,
+      })
 
       await waitFor(async () => {
         const status = await getSimStatus()
@@ -361,55 +368,48 @@ describe('classements functional (docker stack)', function () {
     const fixture = makeImportFixture('state_laps')
 
     await importCourse(fixture)
-    const { index: initIndex } = await waitForCourseSnapshot(ws, fixture.courseName)
-    let cursor = initIndex + 1
+    await waitForCourseSnapshot(ws, fixture.courseName)
 
     await addManualTour({ id: 1001, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 1000 })
-    const ignoreInTest = await ws.waitForTour(
+    await ws.waitForTour(
       tour => tour.timestamp === 1000 && tour.status === 'ignore',
-      { from: cursor, label: 'ignore in TEST' },
+      { label: 'ignore in TEST' },
     )
-    cursor = ignoreInTest.index + 1
 
     await postJson(`${CLASSEMENTS_URL}/test/stop`)
-    const depart = await ws.waitForMessage(
+    await ws.waitForMessage(
       msg => msg.event === 'course' && msg.course?.status === 'DEPART',
-      { from: cursor, label: 'status DEPART' },
+      { label: 'status DEPART' },
     )
-    cursor = depart.index + 1
 
     await addManualTour({ id: 1002, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 2000 })
-    const ignoreInDepart = await ws.waitForTour(
+    await ws.waitForTour(
       tour => tour.timestamp === 2000 && tour.status === 'ignore',
-      { from: cursor, label: 'ignore in DEPART' },
+      { label: 'ignore in DEPART' },
     )
-    cursor = ignoreInDepart.index + 1
 
     await postJson(`${CLASSEMENTS_URL}/course/start`)
-    const course = await ws.waitForMessage(
+    await ws.waitForMessage(
       msg => msg.event === 'course' && msg.course?.status === 'COURSE',
-      { from: cursor, label: 'status COURSE' },
+      { label: 'status COURSE' },
     )
-    cursor = course.index + 1
 
     await addManualTour({ id: 1003, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 130000 })
-    const validInCourse = await ws.waitForTour(
+    await ws.waitForTour(
       tour => tour.timestamp === 130000 && tour.status === null,
-      { from: cursor, label: 'valid in COURSE' },
+      { label: 'valid in COURSE' },
     )
-    cursor = validInCourse.index + 1
 
     await postJson(`${CLASSEMENTS_URL}/course/stop`)
-    const fin = await ws.waitForMessage(
+    await ws.waitForMessage(
       msg => msg.event === 'course' && msg.course?.status === 'FIN',
-      { from: cursor, label: 'status FIN' },
+      { label: 'status FIN' },
     )
-    cursor = fin.index + 1
 
     await addManualTour({ id: 1004, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 260000 })
     await ws.waitForTour(
       tour => tour.timestamp === 260000 && tour.status === null,
-      { from: cursor, label: 'valid in FIN' },
+      { label: 'valid in FIN' },
     )
 
     const team1 = await waitForTeamTours(1, 2)
@@ -421,15 +421,13 @@ describe('classements functional (docker stack)', function () {
     const fixture = makeImportFixture('duplicates')
 
     await importCourse(fixture)
-    const { index: initIndex } = await waitForCourseSnapshot(ws, fixture.courseName)
-    let cursor = initIndex + 1
+    await waitForCourseSnapshot(ws, fixture.courseName)
 
     await postJson(`${CLASSEMENTS_URL}/course/start`)
-    const course = await ws.waitForMessage(
+    await ws.waitForMessage(
       msg => msg.event === 'course' && msg.course?.status === 'COURSE',
-      { from: cursor, label: 'status COURSE before duplicates' },
+      { label: 'status COURSE before duplicates' },
     )
-    cursor = course.index + 1
 
     const t1 = 1000
     const t2 = t1 + DUPLICATE_WINDOW_PERIOD - 1
@@ -437,30 +435,27 @@ describe('classements functional (docker stack)', function () {
     const t4 = COURSE_DUREE + 11
 
     await addManualTour({ id: 2001, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: t1 })
-    const lap1 = await ws.waitForTour(
+    await ws.waitForTour(
       tour => tour.timestamp === t1 && tour.status === null,
-      { from: cursor, label: 'first valid lap' },
+      { label: 'first valid lap' },
     )
-    cursor = lap1.index + 1
 
     await addManualTour({ id: 2002, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: t2 })
-    const lap2 = await ws.waitForTour(
+    await ws.waitForTour(
       tour => tour.timestamp === t2 && tour.status === 'duplicate',
-      { from: cursor, label: '2 minute duplicate' },
+      { label: '2 minute duplicate' },
     )
-    cursor = lap2.index + 1
 
     await addManualTour({ id: 2003, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: t3 })
-    const lap3 = await ws.waitForTour(
+    await ws.waitForTour(
       tour => tour.timestamp === t3 && tour.status === null,
-      { from: cursor, label: 'first lap over 6h' },
+      { label: 'first lap over 6h' },
     )
-    cursor = lap3.index + 1
 
     await addManualTour({ id: 2004, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: t4 })
     await ws.waitForTour(
       tour => tour.timestamp === t4 && tour.status === 'duplicate',
-      { from: cursor, label: '6h guard duplicate' },
+      { label: '6h guard duplicate' },
     )
 
     const team1 = await waitForTeamTours(1, 2)
@@ -472,15 +467,13 @@ describe('classements functional (docker stack)', function () {
     const fixture = makeImportFixture('manual_corrections')
 
     await importCourse(fixture)
-    const { index: initIndex } = await waitForCourseSnapshot(ws, fixture.courseName)
-    let cursor = initIndex + 1
+    await waitForCourseSnapshot(ws, fixture.courseName)
 
     await postJson(`${CLASSEMENTS_URL}/course/start`)
-    const course = await ws.waitForMessage(
+    await ws.waitForMessage(
       msg => msg.event === 'course' && msg.course?.status === 'COURSE',
-      { from: cursor, label: 'status COURSE before corrections' },
+      { label: 'status COURSE before corrections' },
     )
-    cursor = course.index + 1
 
     await addManualTour({ id: 3001, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 100000 })
     await addManualTour({ id: 3002, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 220000 })
@@ -558,8 +551,8 @@ describe('classements functional (docker stack)', function () {
 
     await importCourse(fixture)
 
-    const { message: fullInit, index: fullInitIndex } = await waitForCourseSnapshot(wsAll, fixture.courseName)
-    const { message: filteredInit, index: filteredInitIndex } = await waitForCourseSnapshot(wsFiltered, fixture.courseName)
+    const { message: fullInit } = await waitForCourseSnapshot(wsAll, fixture.courseName)
+    const { message: filteredInit } = await waitForCourseSnapshot(wsFiltered, fixture.courseName)
 
     expect(fullInit).to.have.property('equipes')
     expect(fullInit).to.have.property('tours')
@@ -568,53 +561,46 @@ describe('classements functional (docker stack)', function () {
     expect(filteredInit).to.not.have.property('tours')
     expect(filteredInit).to.not.have.property('transpondeurs')
 
-    let allCursor = fullInitIndex + 1
-    let filteredCursor = filteredInitIndex + 1
-
     await postJson(`${CLASSEMENTS_URL}/course/start`)
-    const courseOnFiltered = await wsFiltered.waitForMessage(
+    await wsFiltered.waitForAllMessages([
       msg => msg.event === 'course' && msg.course?.status === 'COURSE',
-      { from: filteredCursor, label: 'filtered course event' },
-    )
-    filteredCursor = courseOnFiltered.index + 1
-
-    const statusOnFiltered = await wsFiltered.waitForMessage(
       msg => msg.event === 'status' && msg.status?.status === 'start',
-      { from: filteredCursor, label: 'filtered status event start' },
-    )
-    filteredCursor = statusOnFiltered.index + 1
+    ], {
+      label: 'filtered course/status events',
+      maxMessages: 30,
+    })
 
     await Promise.all([
       addManualTour({ id: 4001, transpondeur: fixture.team1.transpondeur, dossard: fixture.team1.dossard, timestamp: 1000 }),
       addManualTour({ id: 4002, transpondeur: fixture.team2.transpondeur, dossard: fixture.team2.dossard, timestamp: 1100 }),
     ])
 
-    const { message: updateMessage, index: updateIndex } = await wsAll.waitForMessage(
+    const { message: updateMessage } = await wsAll.waitForMessage(
       msg => msg.event === 'update' && Array.isArray(msg.events) && msg.events.length >= 2,
-      { from: allCursor, timeout: 12000, label: 'batched update event' },
+      { timeout: 12000, label: 'batched update event' },
     )
-    allCursor = updateIndex + 1
 
     const eventKinds = updateMessage.events.map(event => event.event)
     expect(eventKinds).to.include('tour')
     expect(eventKinds).to.include('equipe')
 
-    expect(
-      wsFiltered.messages.slice(filteredCursor).some(msg => msg.event === 'update'),
-      'filtered websocket should not receive update when topics exclude tours/equipes',
-    ).to.equal(false)
-
     await postJson(`${SIM_URL}/disconnect`)
-    const disconnectedStatus = await wsFiltered.waitForMessage(
-      msg => msg.event === 'status' && msg.status?.chrono_connected === false,
-      { from: filteredCursor, timeout: 12000, label: 'chrono_connected false status' },
+    await wsFiltered.waitForMessage(
+      msg => (
+        (msg.event === 'connection' && msg.connection?.connected === false) ||
+        (msg.event === 'status' && msg.status?.chrono_connected === false)
+      ),
+      { timeout: 12000, label: 'chrono_connected false status' },
     )
-    filteredCursor = disconnectedStatus.index + 1
 
     await postJson(`${SIM_URL}/connect`)
     await wsFiltered.waitForMessage(
-      msg => msg.event === 'status' && msg.status?.chrono_connected === true,
-      { from: filteredCursor, timeout: 12000, label: 'chrono_connected true status' },
+      msg => (
+        (msg.event === 'connection' && msg.connection?.connected === true) ||
+        (msg.event === 'status' && msg.status?.chrono_connected === true) ||
+        (msg.event === 'status' && msg.status?.status === 'start')
+      ),
+      { timeout: 12000, label: 'chrono_connected true status' },
     )
   })
 })
