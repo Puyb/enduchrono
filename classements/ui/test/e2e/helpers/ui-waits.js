@@ -17,8 +17,23 @@ async function waitForStatusText(page, expectedText) {
   await expect(status).toContainText(expectedText)
 }
 
+async function waitForBadgeCount(container, expectedCount) {
+  const badge = container.locator('.badge').first()
+  await expect.poll(async () => {
+    const text = await badge.textContent()
+    return Number.parseInt((text || '').trim(), 10)
+  }).toBe(expectedCount)
+}
+
+async function waitForTopTeamName(page, expectedName) {
+  const firstNameCell = page.locator('#equipes-table tbody tr').first().locator('td').nth(1)
+  await expect(firstNameCell).toContainText(expectedName)
+}
+
 module.exports = {
   waitForCourseCreationForm,
   waitForCourseLoaded,
   waitForStatusText,
+  waitForBadgeCount,
+  waitForTopTeamName,
 }

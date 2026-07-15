@@ -119,7 +119,7 @@ export default {
       let tours =  this[this.selection]
       if (!words.length) return tours
       return tours.filter(tour => {
-        const haystack = `${tours.transpondeur} ${tour.dossard}`.toLowerCase()
+        const haystack = `${tour.transpondeur} ${tour.dossard}`.toLowerCase()
         return words.every(word => haystack.includes(word))
       })
     } 
