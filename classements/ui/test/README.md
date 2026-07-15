@@ -159,3 +159,34 @@ Matrice composant -> comportements verifies (mocks store/fetch/router/`$bvModal`
 ### Limites connues
 
 - `EquipierTranspondeurs.onShow` (reinitialisation de `newTranspondeurs` a l'ouverture de la modale) n'est pas testee : les objets `transpondeur` sont partages par reference avec `equipier.transpondeurs`, donc une mutation via `remove()` altere aussi la source clonee par `onShow`, ce qui rend le comportement de reinitialisation incorrect en l'etat (bug pre-existant, hors perimetre de cette tache).
+
+## Couverture unitaire (tache 05)
+
+Fonctions pures de `src/utils.js`, testees sans dependance a Vue/store/reseau :
+
+| Test | Fonction | Comportements verifies |
+| --- | --- | --- |
+| `UNIT-UTILS-001` | `formatTime` | Chaine vide sur valeur invalide (`0`, `NaN`, `undefined`, `null`, `Infinity` - `0` est bien "invalide" pour cette fonction) ; format `HH:MM:SS.mmm` ; cas limites secondes seules, heures multiples (>24h), grandes valeurs (plusieurs jours, pas de plafond). |
+| `UNIT-UTILS-002` | `parseTime` | Parsing du format complet `HH:MM:SS.mmm` ; variantes partielles `MM:SS.mmm` et `SS.mmm` ; coherence aller-retour avec `formatTime` sur le format complet ; cas invalides (`''`, `'abc'`) qui retournent `NaN` sans lever d'exception (comportement actuel documente, pas de validation explicite dans le code). |
+| `UNIT-UTILS-003` | `formatDuree` | Chaine vide sur `0` ; affichage compact sans zeros de tete (`1:05.500`) ; cas limite sub-seconde (`0.500`, `0.999`) ; cas limite longue duree avec heures (`2:03:04.001`). |
+| `UNIT-UTILS-004` | `rankValue` | Priorite au nombre de tours (penalite/bonus inclus dans le nombre de tours effectif) sur le temps ; a tours egaux, priorite au temps le plus court ; fonction pure, insensible au champ `categorie` (le filtrage par categorie se fait ailleurs, pas dans le calcul de rang). |
+
+## Orchestration CI (tache 05)
+
+Pipeline PR (bloquant, `.github/workflows/pr.yml`) :
+
+1. `classements-ui-fast` : `docker compose --profile dev run --rm classements-ui-test` (lint + `test:unit` + `test:integration`).
+2. `classements-ui-e2e-smoke` (execute seulement si `classements-ui-fast` reussit) : `docker compose --profile dev run --rm classements-ui-e2e-smoke`.
+
+Pipeline nightly (non bloquant PR, `.github/workflows/nightly.yml`, cron quotidien + declenchement manuel) :
+
+1. Tout le pipeline PR (lint + unitaires + integration + E2E smoke).
+2. `docker compose --profile dev run --rm classements-ui-e2e-core`.
+3. Publication de `classements/ui/playwright-report` et `classements/ui/test-results` en artefact CI, y compris en cas de succes (pour disposer des traces/retries meme sans echec).
+
+Lecture des artefacts : telecharger l'artefact `classements-ui-e2e-report` (nightly) ou `classements-ui-e2e-smoke-report` (PR, uniquement genere si le job echoue) depuis l'onglet "Artifacts" du run GitHub Actions, puis ouvrir `playwright-report/index.html`.
+
+### Limites connues
+
+- Pas de tableau de bord de flakiness dedie : le signal de stabilite repose sur le retry Playwright integre (`retries: 1` quand `CI` est positionne, cf. `playwright.config.js`) et sur la lecture manuelle du rapport HTML publie chaque nuit.
+- Le job PR ne publie le rapport E2E smoke qu'en cas d'echec, pour eviter d'alourdir chaque PR ; le rapport nightly est lui publie systematiquement.

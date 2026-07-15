@@ -1,0 +1,36 @@
+name: CI Nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  classements-ui-full:
+    name: classements-ui - pipeline complet (PR + E2E core)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint + tests unitaires + tests d'integration
+        run: docker compose --profile dev run --rm classements-ui-test
+
+      - name: E2E smoke (parcours critiques P0)
+        run: docker compose --profile dev run --rm classements-ui-e2e-smoke
+
+      - name: E2E core (scenarios de correction metier)
+        run: docker compose --profile dev run --rm classements-ui-e2e-core
+
+      - name: Publier le rapport Playwright (traces/videos/screenshots, y compris succes)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: classements-ui-e2e-report
+          path: |
+            classements/ui/playwright-report
+            classements/ui/test-results
+          retention-days: 14
+
+      - name: Arreter la stack
+        if: always()
+        run: docker compose --profile dev down -v
