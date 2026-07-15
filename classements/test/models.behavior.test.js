@@ -196,6 +196,21 @@ describe('models business behavior', () => {
       expect(equipe.tours.map(t => t.numero)).to.deep.equal([1, 3])
     })
 
+    it('flags one of two near-simultaneous laps from a skater wearing two transponders as duplicate', async () => {
+      const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11a', 11)
+      registerTranspondeur('TP-11b', 11)
+      await setStatus('COURSE')
+
+      await Promise.all([
+        models.addTour({ id: 1, transpondeur: 'TP-11a', timestamp: 1000 }),
+        models.addTour({ id: 2, transpondeur: 'TP-11b', timestamp: 1001 }),
+      ])
+
+      expect(tours.map(t => t.status).sort()).to.deep.equal(['duplicate', null])
+      expect(equipe.tours).to.have.length(1)
+    })
+
     it('inserts delayed events in chronological order', async () => {
       const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
       registerTranspondeur('TP-11', 11)

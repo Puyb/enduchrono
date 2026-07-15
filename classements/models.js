@@ -92,16 +92,19 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
   }
 
   const equipe = equipes[equipier.equipe]
+  // Bloc synchrone : aucun `await` entre la lecture et l'écriture de
+  // equipe.tours, donc aucun autre appel concurrent à addTour() ne peut
+  // s'intercaler entre la vérification de doublon et son enregistrement.
   if (!tour.status && isDuplicate(timestamp, equipe)) {
     tour.status = 'duplicate'
-  };
-
-  await insertTour(tour)
-  
+  }
   if (!tour.status) {
     addTourToEquipe(equipe, tour)
     calculClassements(equipe)
   }
+
+  await insertTour(tour)
+
   return Promise.all([
     notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe)),
     events.emit('tours', tour),

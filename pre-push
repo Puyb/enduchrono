@@ -13,7 +13,7 @@ for service in "${SERVICES[@]}"; do
   echo
   echo "==> ${service}: npm test"
 
-  if ! (docker compose --profile dev up ${service}-test); then
+  if ! (docker compose --profile dev up --exit-code-from ${service}-test ${service}-test); then
     echo "ERROR: tests failed in ${service}"
     failed=1
   fi
@@ -23,7 +23,7 @@ for service in "${UI_SERVICES[@]}"; do
   echo
   echo "==> ${service}: lint + tests unitaires + tests d'integration"
 
-  if ! (docker compose --profile dev up ${service}-test); then
+  if ! (docker compose --profile dev up --exit-code-from ${service}-test ${service}-test); then
     echo "ERROR: tests failed in ${service}"
     failed=1
   fi
