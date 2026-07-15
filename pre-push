@@ -3,6 +3,7 @@
 set -u
 
 SERVICES=(chrono classements)
+UI_SERVICES=(classements-ui)
 
 echo "Running tests before push..."
 
@@ -11,6 +12,16 @@ failed=0
 for service in "${SERVICES[@]}"; do
   echo
   echo "==> ${service}: npm test"
+
+  if ! (docker compose --profile dev up ${service}-test); then
+    echo "ERROR: tests failed in ${service}"
+    failed=1
+  fi
+done
+
+for service in "${UI_SERVICES[@]}"; do
+  echo
+  echo "==> ${service}: lint + tests unitaires + tests d'integration"
 
   if ! (docker compose --profile dev up ${service}-test); then
     echo "ERROR: tests failed in ${service}"

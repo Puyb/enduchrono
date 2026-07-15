@@ -6,6 +6,28 @@ on:
     branches: [main]
 
 jobs:
+  chrono-tests:
+    name: chrono - tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: npm test (via docker compose)
+        run: docker compose --profile dev run --rm chrono-test
+      - name: Arreter la stack
+        if: always()
+        run: docker compose --profile dev down -v
+
+  classements-tests:
+    name: classements - tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: npm test (via docker compose)
+        run: docker compose --profile dev run --rm classements-test
+      - name: Arreter la stack
+        if: always()
+        run: docker compose --profile dev down -v
+
   classements-ui-fast:
     name: classements-ui - lint + unitaires + integration
     runs-on: ubuntu-latest

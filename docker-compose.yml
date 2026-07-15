@@ -92,6 +92,17 @@ services:
       - ./classements:/app
     working_dir: /app
     command: bash -c "npm install && npm run test"
+    environment:
+      - CLASSEMENTS_URL=http://classements-dev:3000
+      - CHRONO_URL=http://chrono-dev:3000
+      - SIM_URL=http://sim-dev:3000
+    depends_on:
+      classements-dev:
+        condition: service_healthy
+      chrono-dev:
+        condition: service_healthy
+      sim-dev:
+        condition: service_healthy
     profiles:
       - dev
 

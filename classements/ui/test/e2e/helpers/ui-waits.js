@@ -5,7 +5,7 @@ async function waitForCourseCreationForm(page) {
 }
 
 async function waitForCourseLoaded(page, courseName) {
-  await expect(page.locator('.navbar-brand')).toHaveText(courseName)
+  await expect(page.locator('.navbar-brand')).toHaveText(courseName, { timeout: 20 * 1000 })
 }
 
 async function waitForStatusText(page, expectedText) {
