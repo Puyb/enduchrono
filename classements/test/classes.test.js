@@ -45,8 +45,8 @@ describe('Tour - duree', () => {
   beforeEach(() => {
     equipe = new Equipe({ equipe: 1 })
     equipe.tours = [
-      new Tour({ dossard: 11, timestamp: 1000 }),
-      new Tour({ dossard: 12, timestamp: 2000 }),
+      new Tour({ id: 1, dossard: 11, timestamp: 1000 }),
+      new Tour({ id: 2, dossard: 12, timestamp: 2000 }),
     ]
     equipes[1] = equipe
   })
@@ -63,7 +63,7 @@ describe('Tour - duree', () => {
   })
 
   it('should calculate duration correctly for a new tour added to the team', () => {
-    const newTour = new Tour({ dossard: 13, timestamp: 3000 })
+    const newTour = new Tour({ id: 3, dossard: 13, timestamp: 3000 })
     equipe.tours.push(newTour)
 
     // La durée du nouveau tour sera de 3000 - 2000 = 1000
@@ -72,9 +72,9 @@ describe('Tour - duree', () => {
 
   it('should calculate duration correctly even if a previous tour is not valid', () => {
     equipe.tours[1].status = 'deleted' // Tour terminé
-    equipe.tours.push(new Tour({ dossard: 12, timestamp: 3000, status: 'ignore' }))
-    equipe.tours.push(new Tour({ dossard: 11, timestamp: 4000, status: 'ignore' }))
-    equipe.tours.push(new Tour({ dossard: 13, timestamp: 5000 }))
+    equipe.tours.push(new Tour({ id: 3, dossard: 12, timestamp: 3000, status: 'ignore' }))
+    equipe.tours.push(new Tour({ id: 4, dossard: 11, timestamp: 4000, status: 'ignore' }))
+    equipe.tours.push(new Tour({ id: 5, dossard: 13, timestamp: 5000 }))
 
 
     expect(equipe.tours[4].duree).to.equal(4000)
@@ -83,7 +83,7 @@ describe('Tour - duree', () => {
   it('should compute duration from race start when all previous tours are non-counting', () => {
     equipe.tours[0].status = 'ignore'
     equipe.tours[1].status = 'duplicate'
-    equipe.tours.push(new Tour({ dossard: 11, timestamp: 3000 }))
+    equipe.tours.push(new Tour({ id: 3, dossard: 11, timestamp: 3000 }))
     expect(equipe.tours[2].duree).to.equal(3000)
   })
 

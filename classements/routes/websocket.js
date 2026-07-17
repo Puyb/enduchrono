@@ -1,14 +1,16 @@
 'use strict'
-import { tours, equipes, equipiers, categories, transpondeurs } from '../classes.js'
-import { getCourseInfo } from '../models.js'
+import { tours, equipes, equipiers, categories, transpondeurs, toursPerMinute } from '../classes.js'
+import { getCourseInfo, getToursCounts } from '../models.js'
 import * as models from '../models.js'
 import * as sql from '../sql.js'
 import * as chrono from '../tours.js'
 import _ from 'lodash'
 
+const MAX_LIVE_TOURS = 100
+
 export default async function route(fastify, opts) {
   fastify.get('/websockets/control', { websocket: true }, async (websocket, req) => {
-    const topics = req.query?.topics?.split(',') || ['course', 'categories', 'tours', 'equipes', 'equipiers', 'equipier', 'transpondeurs', 'transpondeur', 'filenames', 'status', 'connection', 'open', 'close']
+    const topics = req.query?.topics?.split(',') || ['course', 'categories', 'tours', 'toursCounts', 'toursPerMinute', 'equipes', 'equipiers', 'equipier', 'transpondeurs', 'transpondeur', 'filenames', 'status', 'connection', 'open', 'close']
 
     const listen = (obj, event, cb) => {
       if (!topics.includes(event)) return
@@ -32,7 +34,9 @@ export default async function route(fastify, opts) {
         ..._.pick({
           course,
           categories: _.without(Object.keys(categories), 'general'),
-          tours,
+          tours: tours.slice(-MAX_LIVE_TOURS),
+          toursCounts: getToursCounts(),
+          toursPerMinute,
           equipes: _.mapValues(equipes, equipe => ({ ...equipe, tours: equipe.tours.length })),
           equipiers,
           transpondeurs: _.values(transpondeurs),

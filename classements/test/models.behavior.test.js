@@ -175,7 +175,7 @@ describe('models business behavior', () => {
 
       await models.addTour({ id: 10, transpondeur: 'UNKNOWN', timestamp: 12345 })
 
-      expect(transpondeurs.UNKNOWN).to.deep.equal({ id: 'UNKNOWN', dossard: null, deleted: false })
+      expect(transpondeurs.UNKNOWN).to.deep.equal({ id: 'UNKNOWN', dossard: null, deleted: false, passages: 1, lastSeen: 12345 })
       expect(tours).to.have.length(1)
       expect(tours[0]).to.include({ numero: 10, transpondeur: 'UNKNOWN', dossard: null, status: null })
       expect(db.state.inserts.map(i => i.table)).to.include.members(['transpondeurs', 'tours'])
@@ -221,6 +221,75 @@ describe('models business behavior', () => {
 
       expect(tours.map(t => t.numero)).to.deep.equal([2, 1])
       expect(equipe.tours.map(t => t.timestamp)).to.deep.equal([1500, 2000])
+    })
+  })
+
+  describe('numeroEquipe', () => {
+    it('assigns sequential numeroEquipe as laps are added', async () => {
+      const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000 })
+      await models.addTour({ id: 2, transpondeur: 'TP-11', timestamp: 1000 + DUPLICATE_WINDOW_PERIOD + 1 })
+
+      expect(equipe.tours.map(t => t.numeroEquipe)).to.deep.equal([1, 2])
+    })
+
+    it('does not assign a numeroEquipe to duplicate or unresolved laps', async () => {
+      registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000 })
+      await models.addTour({ id: 2, transpondeur: 'TP-11', timestamp: 1000 + DUPLICATE_WINDOW_PERIOD - 1 })
+      await models.addTour({ id: 3, transpondeur: 'UNKNOWN', timestamp: 5000 })
+
+      expect(tours.find(t => t.status === 'duplicate').numeroEquipe).to.equal(null)
+      expect(tours.find(t => t.transpondeur === 'UNKNOWN').numeroEquipe).to.equal(null)
+    })
+
+    it('renumbers subsequent laps when an earlier lap is deleted then restored', async () => {
+      const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+      const gap = DUPLICATE_WINDOW_PERIOD + 1
+
+      await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000 })
+      await models.addTour({ id: 2, transpondeur: 'TP-11', timestamp: 1000 + gap })
+      await models.addTour({ id: 3, transpondeur: 'TP-11', timestamp: 1000 + 2 * gap })
+      const firstTourId = equipe.tours[0].id
+
+      await models.modifTour(firstTourId, true)
+      expect(equipe.tours.map(t => t.numeroEquipe)).to.deep.equal([1, 2])
+
+      await models.modifTour(firstTourId, false)
+      expect(equipe.tours.map(t => t.numeroEquipe)).to.deep.equal([1, 2, 3])
+    })
+  })
+
+  describe('getToursCounts', () => {
+    it('counts only ignored laps while in TEST status', async () => {
+      await setStatus('TEST')
+
+      await models.addTour({ id: 1, transpondeur: 'TP-X', timestamp: 1000 })
+
+      expect(models.getToursCounts()).to.deep.equal({ all: 1, normaux: 0, duplicate: 0, deleted: 0, unknown: 1 })
+    })
+
+    it('splits normaux/duplicate/deleted/unknown once the course has started', async () => {
+      const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000 }) // normal
+      await models.addTour({ id: 2, transpondeur: 'TP-11', timestamp: 1000 + DUPLICATE_WINDOW_PERIOD - 1 }) // duplicate
+      await models.addTour({ id: 3, transpondeur: 'UNKNOWN', timestamp: 300000 }) // normal mais sans equipe (unknown)
+      await models.addTour({ id: 4, transpondeur: 'TP-11', timestamp: 300000 }) // normal, loin du premier tour
+
+      await models.modifTour(equipe.tours[0].id, true) // supprime le premier tour normal de l'equipe
+
+      expect(models.getToursCounts()).to.deep.equal({ all: 4, normaux: 1, duplicate: 1, deleted: 1, unknown: 1 })
     })
   })
 

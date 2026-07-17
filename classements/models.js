@@ -1,7 +1,7 @@
 'use strict'
 import _ from 'lodash'
 import { AsyncEventEmitter } from './utils.js'
-import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS } from './classes.js'
+import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS, toursCounts, toursPerMinute, adjustTourCount, adjustToursPerMinute } from './classes.js'
 import { getKnex } from './sql.js'
 
 export const DUPLICATE_WINDOW_PERIOD = 60000 * 2
@@ -61,7 +61,7 @@ export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD)
 
 export async function insertTour(tour) {
     const knex = getKnex()
-    const [id] = await knex.insert(_.omit(tour, ['duree'])).into('tours')
+    const [id] = await knex.insert(_.omit(tour, ['duree', 'numeroEquipe'])).into('tours')
     tour.id = id
     if (tour.timestamp < _.last(tours)?.timestamp) {
       const pos = tours.findIndex(t => t.timestamp >= tour.timestamp)
@@ -85,6 +85,7 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
   const equipier = equipiers[tour.dossard]
   console.log(equipier, transpondeurs[transpondeur])
   if (!equipier) {
+    registerTourStats(tour)
     await insertTour(tour)
     tours.dossard = null
     events.emit('tours', tour)
@@ -102,6 +103,7 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
     addTourToEquipe(equipe, tour)
     calculClassements(equipe)
   }
+  registerTourStats(tour)
 
   await insertTour(tour)
 
@@ -109,6 +111,17 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
     notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe)),
     events.emit('tours', tour),
   ])[0]
+}
+
+const registerTourStats = tour => {
+  adjustTourCount(tour, tour.status, 1)
+  if (tour.status === null) adjustToursPerMinute(tour.timestamp, 1)
+  if (tour.transpondeur && transpondeurs[tour.transpondeur]) {
+    const transpondeur = transpondeurs[tour.transpondeur]
+    transpondeur.passages = (transpondeur.passages || 0) + 1
+    transpondeur.lastSeen = tour.timestamp
+    events.emit('transpondeur', transpondeur)
+  }
 }
 
 export const addTourToEquipe = (equipe, tour) => {
@@ -123,7 +136,6 @@ export const addTourToEquipe = (equipe, tour) => {
   equipe.temps = Math.max(equipe.temps || 0, tour.timestamp)
   equipe._has_changed = true
   equipe._rank = rankValue(equipe)
-
 }
 
 export const rankValue = equipe => -(equipe.tours.length + equipe.penalite) * 100 * 3600 * 1000 + (equipe.temps || 0)
@@ -201,9 +213,14 @@ export async function modifTour(id, deleted) {
   if (![null, 'duplicate', 'deleted'].includes(tour.status)) return
   if (tour.status === 'deleted' && deleted) return
   if (tour.status == null && !deleted) return
+  const oldStatus = tour.status
   tour.status = deleted ? 'deleted' : null
   const knex = getKnex()
   await knex('tours').where({ id }).update({ status: tour.status })
+  adjustTourCount(tour, oldStatus, -1)
+  adjustTourCount(tour, tour.status, 1)
+  if (oldStatus === null) adjustToursPerMinute(tour.timestamp, -1)
+  if (tour.status === null) adjustToursPerMinute(tour.timestamp, 1)
   const equipier = equipiers[tour.dossard]
   const equipe = equipes[equipier?.equipe]
   if (tour.dossard && equipier && equipe) {
@@ -244,6 +261,28 @@ export function getLastTourNumero() {
   if (status === 'TEST' && last?.status === 'ignore')  return last?.numero
   if (status !== 'TEST' && last?.status !== 'ignore')  return last?.numero
   return null
+}
+
+export function getStatus() { return status }
+
+export function getToursCounts() {
+  const isTest = status === 'TEST'
+  if (isTest) {
+    return {
+      all: toursCounts.ignore.total,
+      normaux: 0,
+      duplicate: 0,
+      deleted: 0,
+      unknown: toursCounts.ignore.unknown,
+    }
+  }
+  return {
+    all: toursCounts.null.total + toursCounts.duplicate.total + toursCounts.deleted.total,
+    normaux: toursCounts.null.total - toursCounts.null.unknown,
+    duplicate: toursCounts.duplicate.total,
+    deleted: toursCounts.deleted.total,
+    unknown: toursCounts.null.unknown + toursCounts.duplicate.unknown + toursCounts.deleted.unknown,
+  }
 }
 
 export async function getCourseInfo() {

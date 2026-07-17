@@ -3,7 +3,7 @@ import { AsyncEventEmitter } from './utils.js'
 import path from 'path'
 import Knex from 'knex'
 import * as klasses from './classes.js'
-import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, categories, STATUS, reset } from './classes.js'
+import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, transpondeurs, categories, STATUS, reset, adjustTourCount, adjustToursPerMinute } from './classes.js'
 
 const __dirname = import.meta.dirname;
 const DEFAULT_DIR = path.join(__dirname, './data')
@@ -134,6 +134,7 @@ export async function initDb() {
       table.unique(['id'])
       table.foreign('dossard').references('dossard').inTable('equipiers')
       table.index(['dossard'])
+      table.index(['timestamp', 'id']) // pagination par curseur (keyset) sur GET /tours
     })
     await knex.schema.createTable('log', (table) => {
         table.integer('timestamp')
@@ -169,6 +170,13 @@ export async function load() {
   for (const tourRow of tourRows) {
     const tour = new Tour(tourRow)
     tours.push(tour)
+    adjustTourCount(tour, tour.status, 1)
+    if (tour.status === null) adjustToursPerMinute(tour.timestamp, 1)
+    if (tour.transpondeur && transpondeurs[tour.transpondeur]) {
+      const transpondeur = transpondeurs[tour.transpondeur]
+      transpondeur.passages = (transpondeur.passages || 0) + 1
+      transpondeur.lastSeen = tour.timestamp
+    }
     if (!tour.dossard) continue
 
     const equipier = equipiers[tour.dossard]
