@@ -1,6 +1,6 @@
 const { shallowMount } = require('@vue/test-utils')
 const App = require('../../src/App.vue').default
-const { createStoreState, createTour, stubBvModal } = require('./helpers/factories')
+const { createStoreState, stubBvModal } = require('./helpers/factories')
 
 function mountApp(state) {
   return shallowMount(App, {
@@ -28,13 +28,13 @@ describe('App integration', () => {
   it('INT-APP-002 affiche la navbar et les compteurs quand une course est chargee', () => {
     const state = createStoreState({
       course: { status: 'COURSE', name: 'Ma Course' },
-      tours: [createTour({ id: 1, status: null }), createTour({ id: 2, status: 'ignore' })],
+      toursCounts: { all: 1, normaux: 1, duplicate: 0, deleted: 0, unknown: 0 },
       equipes: { 1: {} },
       transpondeurs: [{ id: 'T1' }],
     })
     const wrapper = mountApp(state)
     expect(wrapper.text()).toContain('Ma Course')
-    expect(wrapper.vm.toursAll).toHaveLength(1)
+    expect(wrapper.text()).toContain('1')
     expect(wrapper.vm.transpondeursAll).toHaveLength(1)
   })
 
@@ -49,13 +49,13 @@ describe('App integration', () => {
     expect(wrapper.text()).toContain(expectedText)
   })
 
-  it('INT-APP-004 bascule toursAll sur les tours "ignore" en mode TEST', () => {
+  it('INT-APP-004 affiche le compteur de tours issu de toursCounts.all (deja calcule cote serveur/store)', () => {
     const state = createStoreState({
       course: { status: 'TEST', name: 'Course' },
-      tours: [createTour({ id: 1, status: 'ignore' }), createTour({ id: 2, status: null })],
+      toursCounts: { all: 1, normaux: 0, duplicate: 0, deleted: 0, unknown: 1 },
     })
     const wrapper = mountApp(state)
-    expect(wrapper.vm.toursAll.map(t => t.id)).toEqual([1])
+    expect(wrapper.text()).toContain('1')
   })
 
   it('INT-APP-005 showDepart est actif uniquement en statut DEPART', () => {

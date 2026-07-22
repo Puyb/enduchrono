@@ -35,7 +35,7 @@
       {{ data.item.numero }}
     </template>
     <template #cell(numeroParEquipe)="data">
-      {{ numero(data.item) }}
+      {{ data.item.numeroEquipe }}
     </template>
     <template #cell(timestamp)="data">
       {{ formatTime(data.item.timestamp) }}
@@ -51,7 +51,6 @@
 </template>
 
 <script>
-import { groupBy, mapValues } from 'lodash'
 import { formatTime, formatDuree } from '../utils'
 export default {
   name: 'ToursTable',
@@ -112,13 +111,6 @@ export default {
         }
       }
     },
-    numero(tour) {
-      if (!this._toursParEquipes || !Object.keys(this._toursParEquipes).length) {
-        this._toursParEquipes = mapValues(groupBy(this.$store.state.tours.filter(t => t.dossard && !t.status), t => String(t.dossard).slice(0, -1)), v => v.reverse())
-        setTimeout(() => delete this._toursParEquipes, 100);
-      }
-      return (this._toursParEquipes[String(tour.dossard).slice(0, -1)]?.indexOf(tour) + 1) || null
-    }
   }
 }
 </script>

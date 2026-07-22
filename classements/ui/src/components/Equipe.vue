@@ -17,10 +17,10 @@
           <b-table striped hover small :items="equipiers" :fields="equipiersFields" :tbody-tr-class="rowClass">
               <template #cell(tours)="data">
                   {{ data.item.tours }}
-                  <EquipierTour :equipier="data.item" />
+                  <EquipierTour :equipier="data.item" :tours="teamTours" />
               </template>
               <template #cell(transpondeurs)="data">
-                  <EquipierTranspondeurs :equipier="data.item" />
+                  <EquipierTranspondeurs :equipier="data.item" :tours="teamTours" />
               </template>
           </b-table>
         </b-col>
@@ -32,7 +32,7 @@
       </b-tab>
       <b-tab title="Graph">
         <b-aspect aspect="3:1">
-          <EquipierChart :equipiers="equipiers" :colors="equipierColors"></EquipierChart>
+          <EquipierChart :equipiers="equipiers" :tours="teamTours" :colors="equipierColors"></EquipierChart>
         </b-aspect>
       </b-tab>
     </b-tabs>
@@ -46,7 +46,8 @@ import EquipeCategorie from './EquipeCategorie.vue'
 import EquipierTranspondeurs from './EquipierTranspondeurs.vue'
 import EquipierTour from './EquipierTour.vue'
 import ToursTable from './ToursTable.vue'
-import { formatTime, formatDuree } from '../utils'
+import { formatTime, formatDuree, insertTourDescending } from '../utils'
+import { bus } from '../eventBus'
 export default {
   name: 'Tours',
   components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, EquipierTour, ToursTable },
@@ -55,6 +56,10 @@ export default {
   },
   data() {
     return {
+      // Historique complet des tours de l'equipe (pas la fenetre live bornee du
+      // store), recupere via GET /tours?equipe=... et tenu a jour par le bus
+      // d'evenements local (voir eventBus.js).
+      teamTours: [],
       equipiersFields: [
         'dossard',
         'nom',
@@ -108,7 +113,7 @@ export default {
     },
     equipiers() {
       return Object.values(this.$store.state.equipiers).filter(equipier => String(equipier.dossard).slice(0, -1) === this.numero).map(equipier => {
-        const tours = this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard && !tour.status);
+        const tours = this.teamTours.filter(tour => tour.dossard === equipier.dossard && !tour.status);
           return {
             ...equipier,
             tours: tours.length,
@@ -118,14 +123,22 @@ export default {
       });
     },
     tours() {
-      const tours = this.$store.state.tours
-        .filter(tour => String(tour.dossard).slice(0, -1) === this.numero)
       if (this.$store.state.course.status === 'TEST') {
-        return tours.filter(t => t.status === 'ignore')
+        return this.teamTours.filter(t => t.status === 'ignore')
       } else {
-        return tours.filter(t => t.status !== 'ignore')
+        return this.teamTours.filter(t => t.status !== 'ignore')
       }
     },
+  },
+  watch: {
+    numero: { immediate: true, handler() { this.fetchTeamTours() } },
+    '$store.state.wsInitCount'() { this.fetchTeamTours() },
+  },
+  mounted() {
+    bus.$on('tour', this.onTourEvent)
+  },
+  beforeDestroy() {
+    bus.$off('tour', this.onTourEvent)
   },
   methods: {
     rowClass(item, type) {
@@ -137,6 +150,30 @@ export default {
       return classes
     },
     formatTime,
+    onTourEvent(tour, update) {
+      if (String(tour.dossard).slice(0, -1) !== this.numero) return
+      const existing = update && this.teamTours.find(t => t.id === tour.id)
+      if (existing) {
+        Object.assign(existing, tour)
+      } else {
+        insertTourDescending(this.teamTours, tour)
+      }
+    },
+    async fetchTeamTours() {
+      let tours = []
+      let before
+      for (;;) {
+        const params = new URLSearchParams({ equipe: this.numero, limit: 500 })
+        if (before) params.set('before', before)
+        const res = await fetch(`${this.$root.URL}/tours?${params.toString()}`)
+        const json = await res.json()
+        tours = tours.concat(json.tours)
+        const last = json.tours[json.tours.length - 1]
+        if (!json.hasMore || !last) break
+        before = `${last.timestamp}:${last.id}`
+      }
+      this.teamTours = tours
+    },
   }
 }
 </script>

@@ -9,14 +9,23 @@ const EquipierTour = require('../../src/components/EquipierTour.vue').default
 const EquipierTranspondeurs = require('../../src/components/EquipierTranspondeurs.vue').default
 const { createEquipe, createEquipier, createTour, createStoreState } = require('./helpers/factories')
 
-function mountEquipe(numero, state) {
-  return shallowMount(Equipe, {
+function mountEquipe(numero, state, teamTours = []) {
+  const wrapper = shallowMount(Equipe, {
     propsData: { numero },
     mocks: { $store: { state: createStoreState(state) } },
   })
+  // teamTours est desormais alimente par un fetch async (GET /tours?equipe=...) ;
+  // on l'injecte directement en donnee locale pour tester les projections de
+  // maniere synchrone, sans dependre de la resolution du fetch mocke.
+  wrapper.vm.teamTours = teamTours
+  return wrapper
 }
 
 describe('Equipe integration', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({ json: async () => ({ tours: [], hasMore: false }) })
+  })
+
   const equipes = {
     1: createEquipe({ equipe: 1, nom: 'Equipe 1', categorie: 'A' }),
   }
@@ -33,7 +42,7 @@ describe('Equipe integration', () => {
       // tours d'une autre equipe : ne doivent pas etre comptes
       createTour({ id: 4, dossard: 21, status: null, timestamp: 999999, duree: 1000 }),
     ]
-    const wrapper = mountEquipe('1', { equipes, equipiers, tours, course: { status: 'COURSE' } })
+    const wrapper = mountEquipe('1', { equipes, equipiers, course: { status: 'COURSE' } }, tours)
 
     const equipier11 = wrapper.vm.equipiers.find(e => e.dossard === 11)
     expect(equipier11.tours).toBe(2)
@@ -50,7 +59,7 @@ describe('Equipe integration', () => {
       createTour({ id: 2, dossard: 11, status: 'deleted', timestamp: 20000, duree: 10000 }),
       createTour({ id: 3, dossard: 11, status: 'duplicate', timestamp: 30000, duree: 10000 }),
     ]
-    const wrapper = mountEquipe('1', { equipes, equipiers, tours, course: { status: 'COURSE' } })
+    const wrapper = mountEquipe('1', { equipes, equipiers, course: { status: 'COURSE' } }, tours)
     const equipier11 = wrapper.vm.equipiers.find(e => e.dossard === 11)
     expect(equipier11.tours).toBe(1)
   })
@@ -60,7 +69,7 @@ describe('Equipe integration', () => {
       createTour({ id: 1, dossard: 11, status: 'ignore' }),
       createTour({ id: 2, dossard: 11, status: null }),
     ]
-    const wrapper = mountEquipe('1', { equipes, equipiers, tours, course: { status: 'TEST' } })
+    const wrapper = mountEquipe('1', { equipes, equipiers, course: { status: 'TEST' } }, tours)
     expect(wrapper.vm.tours.map(t => t.id)).toEqual([1])
   })
 
@@ -70,16 +79,15 @@ describe('Equipe integration', () => {
       createTour({ id: 2, dossard: 11, status: null }),
       createTour({ id: 3, dossard: 11, status: 'deleted' }),
     ]
-    const wrapper = mountEquipe('1', { equipes, equipiers, tours, course: { status: 'COURSE' } })
+    const wrapper = mountEquipe('1', { equipes, equipiers, course: { status: 'COURSE' } }, tours)
     expect(wrapper.vm.tours.map(t => t.id)).toEqual([2, 3])
   })
 
-  it('INT-EQUIPE-005 la liste des tours ne retient que ceux de l\'equipe consultee', () => {
+  it('INT-EQUIPE-005 la liste des tours ne retient que ceux de l\'equipe consultee (deja filtres par l\'API)', () => {
     const tours = [
       createTour({ id: 1, dossard: 11, status: null }),
-      createTour({ id: 2, dossard: 21, status: null }),
     ]
-    const wrapper = mountEquipe('1', { equipes, equipiers, tours, course: { status: 'COURSE' } })
+    const wrapper = mountEquipe('1', { equipes, equipiers, course: { status: 'COURSE' } }, tours)
     expect(wrapper.vm.tours.map(t => t.id)).toEqual([1])
   })
 
@@ -88,7 +96,7 @@ describe('Equipe integration', () => {
     // via un scoped slot de b-table, non evalue par le stub shallowMount.
     const wrapper = mount(Equipe, {
       propsData: { numero: '1' },
-      mocks: { $store: { state: createStoreState({ equipes, equipiers, tours: [], course: { status: 'COURSE' } }) } },
+      mocks: { $store: { state: createStoreState({ equipes, equipiers, course: { status: 'COURSE' } }) } },
     })
     expect(wrapper.findComponent(EquipePenalite).exists()).toBe(true)
     expect(wrapper.findComponent(EquipeCategorie).exists()).toBe(true)

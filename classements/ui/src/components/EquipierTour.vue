@@ -12,7 +12,7 @@
       <b-table-simple>
         <b-tr>
           <b-th>Tours</b-th>
-          <b-th>{{ tours.length }}</b-th>
+          <b-th>{{ teamTours.length }}</b-th>
           <b-th><BIconArrowRightShort></BIconArrowRightShort></b-th>
           <b-th>{{ newNbTours }}</b-th>
         </b-tr>
@@ -46,6 +46,7 @@ export default {
   },
   props: {
     equipier: null,
+    tours: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -74,8 +75,8 @@ export default {
     equipe() {
       return this.$store.state.equipes[this.numero]
     },
-    tours() {
-      const tours = this.$store.state.tours
+    teamTours() {
+      const tours = this.tours
         .filter(tour => String(tour.dossard).slice(0, -1) === this.numero)
       if (this.$store.state.course.status === 'TEST') {
         return tours.filter(t => t.status === 'ignore')
@@ -84,7 +85,7 @@ export default {
       }
     },
     newTours() {
-      const tours = [...this.tours].reverse()
+      const tours = [...this.teamTours].reverse()
       let pos = tours.findIndex(tr => tr.timestamp > this.newPassage)
       const newTours = []
       let previousTime = 0
@@ -99,7 +100,7 @@ export default {
         duree: this.newPassage - previousTime,
         source: 'Manuel',
       })
-      if (pos < this.tours.length) {
+      if (pos < this.teamTours.length) {
         newTours.push({
           ...tours[pos],
           newDuree: tours[pos].timestamp - this.newPassage,
@@ -113,7 +114,7 @@ export default {
     newPositionCategorie() {
       return this.newPosition(this.equipe.categorie)
     },
-    newNbTours() { return this.tours.length + 1 }
+    newNbTours() { return this.teamTours.length + 1 }
   },
   methods: {
     rowClass(item, type) {

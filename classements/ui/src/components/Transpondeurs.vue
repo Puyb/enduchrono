@@ -50,10 +50,10 @@
           {{ $store.state.equipes[String(data.item.dossard).slice(0, -1)]?.categorie }}
         </template>
         <template #cell(passages)="data">
-          {{ tours(data.item).length }}
+          {{ data.item.passages || 0 }}
         </template>
         <template #cell(timestamp)="data">
-          {{ lastSeen(data.item) }}
+          {{ formatTime(data.item.lastSeen) }}
         </template>
       </b-table>
     </div>
@@ -115,8 +115,11 @@ export default {
     transpondeursAll() { return this.$store.state.transpondeurs },
     transpondeursActive() { return this.$store.state.transpondeurs.filter(t => t.dossard && !t.deleted) },
     transpondeursInactive() { return this.$store.state.transpondeurs.filter(t => t.deleted) },
+    // Approximation : ne se base que sur la fenetre live bornee `store.state.tours`
+    // (pas d'equivalent server pour "vu hors TEST uniquement"), suffisant pour la
+    // duree de vie normale d'un transpondeur non vu recemment.
     transpondeursNeverSeenCourse() { return this.$store.state.transpondeurs.filter(t => t.dossard && !this.tours(t).filter(tr => tr.status !== 'ignore').length) },
-    transpondeursNeverSeen() { return this.$store.state.transpondeurs.filter(t => t.dossard && !this.tours(t).length) },
+    transpondeursNeverSeen() { return this.$store.state.transpondeurs.filter(t => t.dossard && !t.passages) },
     transpondeursUnknown() { return this.$store.state.transpondeurs.filter(t => !t.dossard) },
     transpondeursSelected() {
       const words = this.search.toLowerCase().split(' ').filter(v => v)
@@ -140,9 +143,7 @@ export default {
       }
       return this.toursCache[transpondeur.id] || []
     },
-    lastSeen(transpondeur) {
-      return formatTime(this.tours(transpondeur).slice(-1)[0]?.timestamp)
-    },
+    formatTime,
     rowClass(item, type) {
       if (!item || type !== 'row') return
       if (!item.dossard) return 'table-danger'

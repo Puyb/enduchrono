@@ -18,6 +18,12 @@ function mountTours(tours, status = 'COURSE') {
 }
 
 describe('Tours integration', () => {
+  beforeEach(() => {
+    // Un changement de filtre/recherche sort du mode live et declenche un fetch
+    // GET /tours (voir Tours.vue) ; mocke pour ne pas dependre du reseau ici.
+    global.fetch = jest.fn().mockResolvedValue({ json: async () => ({ tours: [], hasMore: false }) })
+  })
+
   it('INT-TOURS-001 applique les filtres de statut sur les tours', () => {
     const wrapper = mountTours([
       { id: 1, dossard: 11, status: null, transpondeur: 'A' },

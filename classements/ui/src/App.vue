@@ -8,7 +8,7 @@
 
         <b-collapse id="nav-collapse" is-nav>
           <b-navbar-nav>
-            <b-nav-item :active="$route.name === 'tours'" to="/tours">Tours <b-badge pill variant="light">{{ toursAll.length }}</b-badge></b-nav-item>
+            <b-nav-item :active="$route.name === 'tours'" to="/tours">Tours <b-badge pill variant="light">{{ $store.state.toursCounts.all }}</b-badge></b-nav-item>
             <b-nav-item :active="['equipe', 'equipes', 'categories'].includes($route.name)" to="/equipes">Équipes / Classements <b-badge pill variant="light">{{ Object.keys($store.state.equipes).length }}</b-badge></b-nav-item>
             <b-nav-item :active="$route.name === 'transpondeurs'" to="/transpondeurs">Transpondeurs <b-badge pill variant="light">{{ transpondeursAll.length }}</b-badge></b-nav-item>
             <b-nav-item :active="$route.name === 'stats'" to="/stats">Stats</b-nav-item>
@@ -16,7 +16,7 @@
           <b-navbar-nav class="ml-auto" id="status">
             <b-nav-text v-if="$store.state.course.status === 'TEST'">Test avant course</b-nav-text>
             <b-nav-text v-if="$store.state.course.status === 'DEPART'">Attente départ</b-nav-text>
-            <b-nav-text v-if="$store.state.course.status === 'COURSE'">{{ $store.state.tours.length }} tour{{ $store.state.tours.length > 1 ? 's' : '' }} - {{ formatTime($store.state.time) }} </b-nav-text>
+            <b-nav-text v-if="$store.state.course.status === 'COURSE'">{{ $store.state.toursCounts.all }} tour{{ $store.state.toursCounts.all > 1 ? 's' : '' }} - {{ formatTime($store.state.time) }} </b-nav-text>
             <b-nav-text v-if="$store.state.course.status === 'FIN'">Course terminée</b-nav-text>
             <b-button v-if="$store.state.course.status === 'TEST'" @click="stopTest()">Stop</b-button>
             <b-button v-if="$store.state.course.status === 'COURSE'" @click="stopCourse()">Stop</b-button>
@@ -115,13 +115,6 @@ export default {
   computed: {
     showError() { return !!this.$store.state.error },
     showDepart() { return this.$store.state.course?.status === 'DEPART' },
-    toursAll() {
-      if (this.$store.state.course.status === 'TEST') {
-        return this.$store.state.tours.filter(t => t.status === 'ignore')
-      } else {
-        return this.$store.state.tours.filter(t => t.status !== 'ignore')
-      }
-    },
     transpondeursAll() { return this.$store.state.transpondeurs },
   },
   methods: {

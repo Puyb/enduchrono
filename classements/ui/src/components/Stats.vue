@@ -4,7 +4,7 @@
       <b-row>
         <b-col cols="4">
           <b-table-simple small>
-            <b-tr><b-th>Tours :</b-th><b-td>{{ $store.state.tours.length }}</b-td></b-tr>
+            <b-tr><b-th>Tours :</b-th><b-td>{{ $store.state.toursCounts.all }}</b-td></b-tr>
           </b-table-simple>
         </b-col>
         <b-col cols="8">
@@ -31,20 +31,12 @@
 <script>
 import ToursMinChart from './ToursMinChart.vue'
 import NoiseChart from './NoiseChart.vue'
-const MINUTE = 60 * 1000;
 export default {
   name: 'Stats',
   components: { ToursMinChart, NoiseChart },
   computed: {
     toursMin() {
-      const res = {}
-      const tours = this.$store.state.tours.filter(t => !t.status)
-      const bucketSize = 1 * MINUTE
-      for (const tour of tours) {
-        const bucket = Math.floor(tour.timestamp / bucketSize) * bucketSize
-        res[bucket] = (res[bucket] || 0) + 1
-      }
-      return res
+      return this.$store.state.toursPerMinute
     },
     lastNoise() {
       return this.$store.state.noise.slice(-1)[0]

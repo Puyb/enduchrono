@@ -12,7 +12,7 @@
         </b-tr>
         <b-tr v-for="transpondeur in newTranspondeurs" :key="transpondeur.id">
           <b-td :class="transpondeur.deleted ? 'deleted' : ''">{{ transpondeur.id }}</b-td>
-          <b-td>{{ tours(transpondeur).length }}</b-td>
+          <b-td>{{ toursOf(transpondeur).length }}</b-td>
           <b-td>{{ lastSeen(transpondeur) }}</b-td>
           <b-td><b-button :variant="transpondeur.deleted ? 'success' : 'danger'" :title="transpondeur.deleted ? 'Activer' : 'Désactiver'" @click="remove(transpondeur)"><b-icon-power /></b-button></b-td>
         </b-tr>
@@ -36,6 +36,7 @@ export default {
   },
   props: {
     equipier: null,
+    tours: { type: Array, default: () => [] },
   },
   data() {
     return {
@@ -51,11 +52,11 @@ export default {
     onShow() {
       this.newTranspondeurs = _.cloneDeep(this.equipier.transpondeurs)
     },
-    tours(transpondeur) {
-      return this.$store.state.tours.filter(tour => tour.transpondeur === transpondeur.id)
+    toursOf(transpondeur) {
+      return this.tours.filter(tour => tour.transpondeur === transpondeur.id)
     },
     lastSeen(transpondeur) {
-      return formatTime(this.tours(transpondeur).slice(-1)[0]?.timestamp)
+      return formatTime(this.toursOf(transpondeur).slice(-1)[0]?.timestamp)
     },
     remove({ id }) {
       const transpondeur = this.newTranspondeurs.find(trans => trans.id === id)

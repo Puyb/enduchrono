@@ -44,6 +44,7 @@ export default {
   },
   props: {
     equipiers: { type: Array, default: () => [] },
+    tours: { type: Array, default: () => [] },
     chartId: {
       type: String,
       default: 'line-chart'
@@ -114,7 +115,7 @@ export default {
           label: `${equipier.dossard} ${equipier.nom} ${equipier.prenom}`,
           borderColor: colors[index],
           backgroundColor: colors[index],
-          data: this.$store.state.tours.filter(tour => tour.dossard === equipier.dossard).map((tour, index2) => {
+          data: this.tours.filter(tour => tour.dossard === equipier.dossard).map((tour, index2) => {
             if (labels.length <= index2) labels.push(index2)
             return tour.duree
           }).reverse(),

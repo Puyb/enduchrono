@@ -28,3 +28,12 @@ export function formatDuree(value) {
 export function rankValue (equipe) {
     return -((equipe.tours || 0) + equipe.penalite) * 100 * 3600 * 1000 + (equipe.temps || 0)
 }
+// Insere un tour dans un tableau trie par timestamp decroissant (le plus recent en premier).
+export function insertTourDescending(tours, tour) {
+  const pos = tours.findIndex(t => t.timestamp < tour.timestamp)
+  if (pos >= 0) {
+    tours.splice(pos, 0, tour)
+  } else {
+    tours.push(tour)
+  }
+}

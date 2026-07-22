@@ -44,10 +44,15 @@ describe('Transpondeurs integration', () => {
   })
 
   it('INT-TRANSPONDEURS-005 transpondeursNeverSeen retient les transpondeurs affectes sans aucun passage', () => {
-    const toursWithIgnore = [
-      createTour({ id: 1, dossard: 21, transpondeur: 'TRP-21', status: 'ignore' }),
+    // passages est desormais un compteur serveur (registerTourStats), incremente
+    // quel que soit le statut du tour (y compris "ignore").
+    const transpondeursWithPassages = [
+      createTranspondeur({ id: 'TRP-11', dossard: 11, deleted: false, passages: 0 }),
+      createTranspondeur({ id: 'TRP-21', dossard: 21, deleted: true, passages: 1 }),
+      createTranspondeur({ id: 'TRP-31', dossard: 31, deleted: false, passages: 0 }),
+      createTranspondeur({ id: 'TRP-UNKNOWN', dossard: null, deleted: false, passages: 0 }),
     ]
-    const { wrapper } = mountTranspondeurs(transpondeurs, { tours: toursWithIgnore })
+    const { wrapper } = mountTranspondeurs(transpondeursWithPassages)
     // TRP-21 a un passage (meme ignore) donc pas "jamais vu"; TRP-11 et TRP-31 n'en ont aucun
     expect(wrapper.vm.transpondeursNeverSeen.map(t => t.id).sort()).toEqual(['TRP-11', 'TRP-31'])
   })
