@@ -95,8 +95,8 @@ const getStatus = async () => {
     }
     return { connected: true, timestamp, status, noise }
   } catch (err) {
-    if (err instanceof TimeoutError) return { connected: false }
-    throw err
+    if (!(err instanceof TimeoutError)) console.error('chronelec status error', err)
+    return { connected: false }
   }
 }
 
@@ -109,7 +109,7 @@ const check = async () => {
   const { status, connected, timestamp, noise } = await getStatus()
   if (connected !== lastConnected) event.emit('connection', { connected })
   lastConnected = connected
-  event.emit('status', { status: { timestamp, status, noise } })
+  event.emit('status', { status: { timestamp, status, noise, connected } })
   return status
 }
 

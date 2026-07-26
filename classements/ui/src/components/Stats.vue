@@ -39,7 +39,7 @@ export default {
       return this.$store.state.toursPerMinute
     },
     lastNoise() {
-      return this.$store.state.noise.slice(-1)[0]
+      return this.$store.state.noise.slice(-1)[0] || {}
     },
   },
 }

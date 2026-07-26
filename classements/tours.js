@@ -41,6 +41,9 @@ export function connect() {
     if (data.passage) events.emit('tour', data.passage)
     if (data.status) {
       events.emit('status', data.status)
+      if ('connected' in data.status) {
+        events.emit('status', { chrono_connected: data.status.connected })
+      }
     }
     if ('connected' in data) {
       events.emit('status', { chrono_connected: data.connected })
