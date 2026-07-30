@@ -11,6 +11,10 @@ export const course = {}
 const BASE_URL = `${process.env.CLASSEMENTS_HOST || 'localhost'}:${process.env.CLASSEMENTS_PORT || 3000}`
 
 let ws
+export function isConnected() {
+  return !!ws && ws.readyState === WebSocket.OPEN
+}
+
 export function fetchConnect() {
   const wsUrl = `ws://${BASE_URL}/websockets/control?topics=equipes,course,open,close`
   ws = new WebSocket(wsUrl, {})
