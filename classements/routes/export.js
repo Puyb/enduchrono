@@ -39,7 +39,7 @@ export default async function route(fastify, opts) {
     const course = await getCourseInfo()
     const nom = course?.name || 'course'
 
-    const rows = _.sortBy(tours, 'timestamp').map(tour => ({
+    const rows = _.sortBy(tours.filter(tour => !tour.status && tour.dossard), 'timestamp').map(tour => ({
       id: tour.id,
       dossard: tour.dossard,
       numero: tour.numeroEquipe ?? '',

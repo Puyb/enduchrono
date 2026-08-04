@@ -112,7 +112,7 @@ describe('routes GET /export/*.csv', function () {
     ])
   })
 
-  it('exporte les tours en CSV, tries par timestamp croissant, avec le nom de la course dans le nom de fichier', async () => {
+  it('exporte les tours normaux en CSV, tries par timestamp croissant, en excluant duplicate/ignore/deleted/sans dossard', async () => {
     await createTempDb("Ma Course d'Ete")
     const knex = sql.getKnex()
     await seedTeam(knex, { equipe: 1, dossard: 11 })
@@ -122,6 +122,10 @@ describe('routes GET /export/*.csv', function () {
       { id: 2, numero: 2, transpondeur: 'TP-11', dossard: 11, timestamp: 4000, source: 'chrono', status: null, deleted: false },
       { id: 3, numero: 3, transpondeur: 'TP-21', dossard: 21, timestamp: 5500, source: 'chrono', status: null, deleted: false },
       { id: 4, numero: 4, transpondeur: 'TP-21', dossard: 21, timestamp: 9000, source: 'chrono', status: null, deleted: false },
+      { id: 5, numero: 5, transpondeur: 'TP-11', dossard: 11, timestamp: 4500, source: 'chrono', status: 'duplicate', deleted: false },
+      { id: 6, numero: 6, transpondeur: 'TP-21', dossard: 21, timestamp: 2000, source: 'chrono', status: 'ignore', deleted: false },
+      { id: 7, numero: 7, transpondeur: 'TP-11', dossard: 11, timestamp: 3000, source: 'chrono', status: 'deleted', deleted: false },
+      { id: 8, numero: 8, transpondeur: 'TP-UNKNOWN', dossard: null, timestamp: 6000, source: 'chrono', status: null, deleted: false },
     ])
     await knex('course').update({ status: STATUS[2] })
     await sql.load()
