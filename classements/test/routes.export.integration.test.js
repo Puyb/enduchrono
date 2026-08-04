@@ -107,8 +107,8 @@ describe('routes GET /export/*.csv', function () {
 
     const rows = parse(res.body, { columns: true })
     expect(rows).to.deep.equal([
-      { numero: '1', temps: '1.000', tours: '2', position_generale: '1', position_categorie: '1', nom: 'Team A', categorie: 'A' },
-      { numero: '2', temps: '9.000', tours: '2', position_generale: '2', position_categorie: '1', nom: 'Team B', categorie: 'B' },
+      { numero: '1', temps: '1.000', tours: '1', penalite: '1', position_generale: '1', position_categorie: '1', nom: 'Team A', categorie: 'A' },
+      { numero: '2', temps: '9.000', tours: '2', penalite: '', position_generale: '2', position_categorie: '1', nom: 'Team B', categorie: 'B' },
     ])
   })
 
