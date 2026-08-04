@@ -37,3 +37,10 @@ export function insertTourDescending(tours, tour) {
     tours.push(tour)
   }
 }
+// Vide le buffer live de tours en place (garde la reactivite Vuex sur le tableau).
+// A appeler des que le compteur materiel est remis a zero (chrono.js `start()`),
+// pour eviter que des tours d'une phase precedente (timestamps devenus obsoletes)
+// ne restent dans le buffer glissant.
+export function resetTours(tours) {
+  tours.length = 0
+}

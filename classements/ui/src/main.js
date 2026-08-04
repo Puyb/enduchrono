@@ -4,9 +4,8 @@ import { BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFla
 import VueRouter from 'vue-router'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
-import { last }  from 'lodash'
 import { bus } from './eventBus'
-import { insertTourDescending } from './utils'
+import { insertTourDescending, resetTours } from './utils'
 Vue.use(BootstrapVue)
 Vue.component('BIcon', BIcon)
 Vue.component('BIconPencil', BIconPencil)
@@ -107,11 +106,10 @@ new Vue({
     this.$store.state.time = 0
     this.$store.state.error = null
     setInterval(() => {
-      const lastTour = last(this.$store.state.tours)
+      const lastTour = this.$store.state.tours[0]
       if (lastTour?.timestamp > this.$store.state.time) {
         startDate = Date.now() - lastTour.timestamp
       }
-      // FIXME sync time with status event
       this.$store.state.time = Date.now() - startDate;
     }, 100)
 
@@ -219,6 +217,15 @@ new Vue({
           }
         }
         if (data.event === 'course') {
+          if (data.course.status === 'TEST' || data.course.status === 'COURSE') {
+            // Le compteur materiel vient d'etre remis a zero (chrono.js `start()`,
+            // appele par /test/start et /course/start) : on vide le buffer live
+            // et on resynchronise l'horloge affichee immediatement, sans attendre
+            // le prochain tour ou le prochain event `status`.
+            resetTours(this.$store.state.tours)
+            startDate = Date.now()
+            this.$store.state.time = 0
+          }
           this.$store.commit('setStatus', data.course.status)
           recomputeExposedCounts()
         }
@@ -231,7 +238,7 @@ new Vue({
           if (data.status.chrono_connected === false) this.$store.state.error = 'chronelec'
           if (data.status.chrono_connected === true) this.$store.state.error = null
           if (data.status.pending) this.$store.state.pending = data.status.pending
-          if (data.status.timestamp) startDate = Date.now() - data.status.timestamp
+          if (data.status.timestamp != null) startDate = Date.now() - data.status.timestamp
           if (data.status.noise) {
             this.$store.state.noise.push(data.status.noise)
             if(this.$store.state.noise.length > 60 * 5)
