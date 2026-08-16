@@ -130,6 +130,9 @@ export async function initDb() {
       table.integer('timestamp')
       table.string('source')
       table.string('status').nullable().default(null) // null, deleted, duplicate, ignore
+      table.integer('signal').nullable()
+      table.integer('detectionCount').nullable()
+      table.integer('battery').nullable()
       table.boolean('deleted', false)
       table.unique(['id'])
       table.foreign('dossard').references('dossard').inTable('equipiers')

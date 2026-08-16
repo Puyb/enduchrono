@@ -55,6 +55,15 @@
         <template #cell(timestamp)="data">
           {{ formatTime(data.item.lastSeen) }}
         </template>
+        <template #cell(signal)="data">
+          {{ data.item.lastSignal }} ({{ data.item.passages ? data.item.sumSignal / data.item.passages : '' }})
+        </template>
+        <template #cell(detectionCount)="data">
+          {{ data.item.lastDetectionCount }} ({{ data.item.passages ? data.item.sumDetectionCount / data.item.passages : '' }})
+        </template>
+        <template #cell(battery)="data">
+          {{ data.item.lastBattery }} ({{ data.item.passages ? data.item.sumBattery / data.item.passages : '' }})
+        </template>
       </b-table>
     </div>
   </div>
@@ -89,6 +98,18 @@ export default {
           key: 'timestamp',
           sortable: true,
           formatter: formatTime
+        },
+        {
+          key: 'signal',
+          sortable: true
+        },
+        {
+          key: 'detectionCount',
+          sortable: true
+        },
+        {
+          key: 'battery',
+          sortable: true
         },
         {
           key: 'equipe',

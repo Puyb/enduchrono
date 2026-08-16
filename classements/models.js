@@ -1,7 +1,7 @@
 'use strict'
 import _ from 'lodash'
 import { AsyncEventEmitter } from './utils.js'
-import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS, toursCounts, toursPerMinute, adjustTourCount, adjustToursPerMinute } from './classes.js'
+import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS, toursCounts, adjustTourCount, adjustToursPerMinute } from './classes.js'
 import { getKnex } from './sql.js'
 
 export const DUPLICATE_WINDOW_PERIOD = 60000 * 2
@@ -27,7 +27,7 @@ export async function initModel() {
 export async function addTranspondeur(transpondeur) {
   const previous = transpondeurs[transpondeur.id]
   console.log('transpondeur', transpondeur, previous)
-  transpondeurs[transpondeur.id] = transpondeur
+  transpondeurs[transpondeur.id] = { ...transpondeur, sumSignal: 0, sumDetectionCount: 0, sumBattery: 0}
   const knex = getKnex()
   await knex.insert(transpondeur).into('transpondeurs').onConflict('id').merge()
   events.emit('transpondeur', transpondeur)
@@ -71,8 +71,8 @@ export async function insertTour(tour) {
     }
 }
 
-export async function addTour({ id, transpondeur = null, dossard = null, timestamp, source = 'chrono' }) {
-  const tour = new Tour({ numero: id, transpondeur, dossard, timestamp, source, status: null })
+export async function addTour({ id, transpondeur = null, dossard = null, timestamp, source = 'chrono', signal, detectionCount, battery }) {
+  const tour = new Tour({ numero: id, transpondeur, dossard, timestamp, source, status: null, signal, detectionCount, battery })
   if (STATUS.indexOf(status) < 2) { // !course
     tour.status = 'ignore'
   }
@@ -120,6 +120,12 @@ const registerTourStats = tour => {
     const transpondeur = transpondeurs[tour.transpondeur]
     transpondeur.passages = (transpondeur.passages || 0) + 1
     transpondeur.lastSeen = tour.timestamp
+    transpondeur.lastSignal = tour.signal
+    transpondeur.lastDetectionCount = tour.detectionCount
+    transpondeur.lastBattery = tour.battery
+    transpondeur.sumSignal += tour.signal
+    transpondeur.sumDetectionCount += tour.detectionCount
+    transpondeur.sumBattery += tour.battery
     events.emit('transpondeur', transpondeur)
   }
 }

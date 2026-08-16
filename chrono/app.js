@@ -5,14 +5,17 @@ const model = require('./model')
 const EventEmitter = require('node:events')
 
 const event = new EventEmitter()
-chrono.on('passage', async ({ transpondeur, timestamp }) => {
+chrono.on('passage', async ({ transpondeur, timestamp, signal, detectionCount, battery }) => {
   try {
-    const id = await model.savePassage({ transpondeur, timestamp })
+    const id = await model.savePassage({ transpondeur, timestamp, signal, detectionCount, battery })
     event.emit('passage', {
       passage: { 
         id,
         transpondeur,
         timestamp,
+        signal,
+        detectionCount,
+        battery,
       },
     })
   } catch (err) {

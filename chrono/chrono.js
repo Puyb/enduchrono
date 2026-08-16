@@ -11,19 +11,26 @@ const ACK = Buffer.from('1b11', 'hex')
 const REPEAT = Buffer.from('1b12', 'hex')
 
 // <STA 119371 00:00'11"648 99 01 3 1579>
-const TRANSPONDEUR_REGEXP = /^<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d+) (\d+)>/
+const TRANSPONDEUR_REGEXP = /<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d+) (\d+)>/
 // [00:00'12" 23 00 10 10]
-const STATUS_REGEXP = /^\[(\d+):(\d+)'(\d+)" (\d+) (\d+) (\d+) (\d+)\]/
+const STATUS_REGEXP = /\[(\d+):(\d+)'(\d+)" (\d+) (\d+) (\d+) (\d+)\]/
 
 const socket = dgram.createSocket('udp4')
+
+let lastSeenTranspondeur;
+let lastSeenTimestamp;
 const pendingCommands = {
   passage: {
     regex: TRANSPONDEUR_REGEXP,
     async resolve(match) {
-      const [, transpondeur, hour, minute, second, milli] = match
+      const [, transpondeur, hour, minute, second, milli, signal, detectionCount, battery, /* crc */] = match
       await send(ACK)
       const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
-      event.emit('passage', { transpondeur, timestamp })
+      if (lastSeenTranspondeur !== transpondeur || lastSeenTimestamp !== timestamp) {
+        event.emit('passage', { transpondeur, timestamp, signal: parseInt(signal), detectionCount: parseInt(detectionCount), battery: parseInt(battery), message: match.input })
+        lastSeenTranspondeur = transpondeur;
+        lastSeenTimestamp = timestamp;
+      }
     }
   }
 }
