@@ -58,7 +58,8 @@ module.exports = async function(fastify, opts) {
       send(chrono.getInfo())
       return
     }
-    chrono.addTour(`<STA ${req.body.transpondeur} ${chrono.getTimeString(req.body.timestamp)} 99 01 3 1579>`, true)
+    const { signal = 99, detectionCount = 1, battery = 3 } = req.body
+    chrono.addTour(`<STA ${req.body.transpondeur} ${chrono.getTimeString(req.body.timestamp)} ${signal} ${String(detectionCount).padStart(2, '0')} ${battery} 1579>`, true)
   })
   fastify.post('/time/multiplier', async (req, res) => {
     chrono.setTimeMultiplier(parseInt(req.body.multiplier))

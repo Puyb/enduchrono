@@ -1,7 +1,7 @@
 'use strict'
 import _ from 'lodash'
 import { AsyncEventEmitter } from './utils.js'
-import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS, toursCounts, adjustTourCount, adjustToursPerMinute } from './classes.js'
+import { Tour, tours, transpondeurs, equipes, equipiers, categories, STATUS, toursCounts, adjustTourCount, adjustToursPerMinute, registerTranspondeurStats } from './classes.js'
 import { getKnex } from './sql.js'
 
 export const DUPLICATE_WINDOW_PERIOD = 60000 * 2
@@ -27,7 +27,7 @@ export async function initModel() {
 export async function addTranspondeur(transpondeur) {
   const previous = transpondeurs[transpondeur.id]
   console.log('transpondeur', transpondeur, previous)
-  transpondeurs[transpondeur.id] = { ...transpondeur, sumSignal: 0, sumDetectionCount: 0, sumBattery: 0}
+  transpondeurs[transpondeur.id] = { ...transpondeur, sumSignal: 0, sumDetectionCount: 0, sumBattery: 0, statsCount: 0 }
   const knex = getKnex()
   await knex.insert(transpondeur).into('transpondeurs').onConflict('id').merge()
   events.emit('transpondeur', transpondeur)
@@ -118,14 +118,7 @@ const registerTourStats = tour => {
   if (tour.status === null) adjustToursPerMinute(tour.timestamp, 1)
   if (tour.transpondeur && transpondeurs[tour.transpondeur]) {
     const transpondeur = transpondeurs[tour.transpondeur]
-    transpondeur.passages = (transpondeur.passages || 0) + 1
-    transpondeur.lastSeen = tour.timestamp
-    transpondeur.lastSignal = tour.signal
-    transpondeur.lastDetectionCount = tour.detectionCount
-    transpondeur.lastBattery = tour.battery
-    transpondeur.sumSignal += tour.signal
-    transpondeur.sumDetectionCount += tour.detectionCount
-    transpondeur.sumBattery += tour.battery
+    registerTranspondeurStats(transpondeur, tour)
     events.emit('transpondeur', transpondeur)
   }
 }

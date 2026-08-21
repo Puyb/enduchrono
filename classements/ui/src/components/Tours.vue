@@ -36,13 +36,15 @@
       </b-container>
     </div>
     <div class="d-flex flex-column flex-fill" style="overflow: scroll; position: relative;">
-      <ToursTable :tours="displayedTours" :fields="fields" :perPage="tablePerPage" :currentPage="tableCurrentPage"/>
+      <ToursTable :tours="displayedTours" :fields="fields" :perPage="tablePerPage" :currentPage="tableCurrentPage" @show-transpondeur="selectedTranspondeurId = $event"/>
     </div>
+    <TranspondeurChart :transpondeurId="selectedTranspondeurId" @close="selectedTranspondeurId = null" />
   </div>
 </template>
 
 <script>
 import ToursTable from './ToursTable.vue'
+import TranspondeurChart from './TranspondeurChart.vue'
 
 const SELECTION_TO_STATUS = {
   toursAll: 'all',
@@ -54,12 +56,13 @@ const SELECTION_TO_STATUS = {
 
 export default {
   name: 'Tours',
-  components: { ToursTable },
+  components: { ToursTable, TranspondeurChart },
   props: {
     tours: [],
   },
   data() {
     return {
+      selectedTranspondeurId: null,
       perPage: 100,
       currentPage: 1,
       fields: [
@@ -82,6 +85,18 @@ export default {
         {
           key: 'duree',
           sortable: true,
+        },
+        {
+          key: 'signal',
+          sortable: true
+        },
+        {
+          key: 'detectionCount',
+          sortable: true
+        },
+        {
+          key: 'battery',
+          sortable: true
         },
         {
           key: 'equipe',

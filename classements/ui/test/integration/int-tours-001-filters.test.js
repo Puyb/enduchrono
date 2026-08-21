@@ -1,4 +1,7 @@
 const { shallowMount } = require('@vue/test-utils')
+// TranspondeurChart importe vue-chartjs (ESM), non transpilable par Jest ; il n'est
+// pas concerne par ce test (assertions sur les filtres/selections de Tours.vue).
+jest.mock('../../src/components/TranspondeurChart.vue', () => ({ name: 'TranspondeurChart', render: h => h('div') }))
 const Tours = require('../../src/components/Tours.vue').default
 
 function mountTours(tours, status = 'COURSE') {

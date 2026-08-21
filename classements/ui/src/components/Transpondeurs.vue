@@ -56,29 +56,37 @@
           {{ formatTime(data.item.lastSeen) }}
         </template>
         <template #cell(signal)="data">
-          {{ data.item.lastSignal }} ({{ data.item.passages ? data.item.sumSignal / data.item.passages : '' }})
+          <SignalIcon :value="data.item.lastSignal" :transpondeurId="data.item.id" @click="selectedTranspondeurId = $event" />
+          {{ data.item.lastSignal }} <span v-if="data.item.statsCount">({{ Math.round(data.item.sumSignal / data.item.statsCount) }})</span>
         </template>
         <template #cell(detectionCount)="data">
-          {{ data.item.lastDetectionCount }} ({{ data.item.passages ? data.item.sumDetectionCount / data.item.passages : '' }})
+          {{ data.item.lastDetectionCount }} <span v-if="data.item.statsCount">({{ (data.item.sumDetectionCount / data.item.statsCount).toFixed(1) }})</span>
         </template>
         <template #cell(battery)="data">
-          {{ data.item.lastBattery }} ({{ data.item.passages ? data.item.sumBattery / data.item.passages : '' }})
+          <BatteryIcon :value="data.item.lastBattery" :transpondeurId="data.item.id" @click="selectedTranspondeurId = $event" />
+          {{ data.item.lastBattery }} <span v-if="data.item.statsCount">({{ (data.item.sumBattery / data.item.statsCount).toFixed(1) }})</span>
         </template>
       </b-table>
     </div>
+    <TranspondeurChart :transpondeurId="selectedTranspondeurId" @close="selectedTranspondeurId = null" />
   </div>
 </template>
 
 <script>
 import { formatTime } from '../utils'
 import { groupBy } from 'lodash'
+import SignalIcon from './SignalIcon.vue'
+import BatteryIcon from './BatteryIcon.vue'
+import TranspondeurChart from './TranspondeurChart.vue'
 export default {
   name: 'transpondeurs',
+  components: { SignalIcon, BatteryIcon, TranspondeurChart },
   props: {
     transpondeurs: [],
   },
   data() {
     return {
+      selectedTranspondeurId: null,
       perPage: 100,
       currentPage: 1,
       fields: [

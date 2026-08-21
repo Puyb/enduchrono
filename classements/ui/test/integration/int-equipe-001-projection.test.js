@@ -2,6 +2,7 @@ const { shallowMount, mount } = require('@vue/test-utils')
 // EquipierChart importe vue-chartjs (ESM), non transpilable par Jest ; il n'est
 // pas concerne par ce test (assertions via shallowMount sur les autres sous-composants).
 jest.mock('../../src/components/EquipierChart.vue', () => ({ name: 'EquipierChart', render: h => h('div') }))
+jest.mock('../../src/components/TranspondeurChart.vue', () => ({ name: 'TranspondeurChart', render: h => h('div') }))
 const Equipe = require('../../src/components/Equipe.vue').default
 const EquipePenalite = require('../../src/components/EquipePenalite.vue').default
 const EquipeCategorie = require('../../src/components/EquipeCategorie.vue').default

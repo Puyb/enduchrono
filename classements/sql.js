@@ -3,7 +3,7 @@ import { AsyncEventEmitter } from './utils.js'
 import path from 'path'
 import Knex from 'knex'
 import * as klasses from './classes.js'
-import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, transpondeurs, categories, STATUS, reset, adjustTourCount, adjustToursPerMinute } from './classes.js'
+import { Tour, Equipe, Equipier, Transpondeur, tours, equipes, equipiers, transpondeurs, categories, STATUS, reset, adjustTourCount, adjustToursPerMinute, registerTranspondeurStats } from './classes.js'
 
 const __dirname = import.meta.dirname;
 const DEFAULT_DIR = path.join(__dirname, './data')
@@ -176,9 +176,7 @@ export async function load() {
     adjustTourCount(tour, tour.status, 1)
     if (tour.status === null) adjustToursPerMinute(tour.timestamp, 1)
     if (tour.transpondeur && transpondeurs[tour.transpondeur]) {
-      const transpondeur = transpondeurs[tour.transpondeur]
-      transpondeur.passages = (transpondeur.passages || 0) + 1
-      transpondeur.lastSeen = tour.timestamp
+      registerTranspondeurStats(transpondeurs[tour.transpondeur], tour)
     }
     if (!tour.dossard) continue
 

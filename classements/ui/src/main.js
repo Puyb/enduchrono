@@ -1,6 +1,11 @@
 import Vue from 'vue'
 import App from './App.vue'
-import { BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFlagFill, BIconArrowRightShort, BIconTrash, BIconPower, BIconRecycle } from 'bootstrap-vue'
+import {
+  BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFlagFill, BIconArrowRightShort, BIconTrash, BIconPower, BIconRecycle,
+  BIconBattery, BIconBatteryHalf, BIconBatteryFull,
+  BIconReception0, BIconReception1, BIconReception2, BIconReception3, BIconReception4,
+  BIconDashCircle,
+} from 'bootstrap-vue'
 import VueRouter from 'vue-router'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
@@ -16,6 +21,15 @@ Vue.component('BIconArrowRightShort', BIconArrowRightShort)
 Vue.component('BIconTrash', BIconTrash)
 Vue.component('BIconPower', BIconPower)
 Vue.component('BIconRecycle', BIconRecycle)
+Vue.component('BIconBattery', BIconBattery)
+Vue.component('BIconBatteryHalf', BIconBatteryHalf)
+Vue.component('BIconBatteryFull', BIconBatteryFull)
+Vue.component('BIconReception0', BIconReception0)
+Vue.component('BIconReception1', BIconReception1)
+Vue.component('BIconReception2', BIconReception2)
+Vue.component('BIconReception3', BIconReception3)
+Vue.component('BIconReception4', BIconReception4)
+Vue.component('BIconDashCircle', BIconDashCircle)
 Vue.use(VueRouter)
 
 Vue.config.productionTip = false
@@ -213,7 +227,15 @@ new Vue({
             }
             if (event.event === 'equipe') this.$store.state.equipes[event.equipe.equipe] = event.equipe
             if (event.event === 'equipier') this.$store.state.equipiers[event.equipier.dossard] = event.equipier
-            if (event.event === 'transpondeur') this.$store.state.transpondeurs.unshift(event.transpondeur)
+            if (event.event === 'transpondeur') {
+              // Emis a chaque passage (pas seulement a l'affectation d'un dossard) depuis
+              // l'ajout du suivi signal/batterie : il faut remplacer l'entree existante par
+              // id plutot que unshift, sous peine d'accumuler des doublons du transpondeur.
+              const list = this.$store.state.transpondeurs
+              const idx = list.findIndex(t => t.id === event.transpondeur.id)
+              if (idx >= 0) list.splice(idx, 1, event.transpondeur)
+              else list.unshift(event.transpondeur)
+            }
           }
         }
         if (data.event === 'course') {
