@@ -390,6 +390,19 @@ describe('models business behavior', () => {
       })
     })
 
+    it('stores an optional comment alongside the penalty', async () => {
+      const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A', penalite: 0 })
+
+      await models.modifEquipe(1, { penalite: -2, penalite_commentaire: 'Depassement interdit' })
+
+      expect(team1).to.have.a.property('penalite_commentaire', 'Depassement interdit')
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { penalite: -2, penalite_commentaire: 'Depassement interdit' },
+      })
+    })
+
     it('moves a team between categories and updates category positions', async () => {
       const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A' })
       const { equipe: team2 } = registerEquipe({ equipeId: 2, dossard: 21, categorie: 'A' })

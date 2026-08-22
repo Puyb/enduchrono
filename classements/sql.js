@@ -96,6 +96,7 @@ export async function initDb() {
       table.string('gerant_code_postal')
       table.string('gerant_code_pays')
       table.integer('penalite').defaultTo(0)
+      table.text('penalite_commentaire').nullable()
       table.boolean('deleted')
       table.unique(['equipe'])
     })

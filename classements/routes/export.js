@@ -4,7 +4,7 @@ import { stringify } from 'csv-stringify/sync'
 import { equipes, tours } from '../classes.js'
 import { getCourseInfo } from '../models.js'
 
-const CLASSEMENTS_COLUMNS = ['numero', 'temps', 'tours', 'penalite', 'position_generale', 'position_categorie', 'nom', 'categorie']
+const CLASSEMENTS_COLUMNS = ['numero', 'temps', 'tours', 'penalite', 'penalite_commentaire', 'position_generale', 'position_categorie', 'nom', 'categorie']
 const TOURS_COLUMNS = ['id', 'dossard', 'numero', 'duree', 'timestamp']
 
 const seconds = ms => Number.isFinite(ms) ? (ms / 1000).toFixed(3) : ''
@@ -27,6 +27,7 @@ export default async function route(fastify, opts) {
       temps: seconds(equipe.temps),
       tours: equipe.tours.length,
       penalite: equipe.penalite || '',
+      penalite_commentaire: equipe.penalite_commentaire || '',
       position_generale: equipe.position_general ?? '',
       position_categorie: equipe.position_categorie ?? '',
       nom: equipe.nom,

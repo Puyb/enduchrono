@@ -53,7 +53,31 @@ describe('EquipePenalite modal integration', () => {
     expect(global.fetch).toHaveBeenCalledWith('http://classements.test/equipe/1', {
       method: 'post',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ penalite: -2 }),
+      body: JSON.stringify({ penalite: -2, penalite_commentaire: null }),
     })
+  })
+
+  it('INT-EQUIPE-PENALITE-004 inclut le commentaire optionnel dans la requete', async () => {
+    const equipe = createEquipe({ equipe: 1, penalite: 0 })
+    const wrapper = mountEquipePenalite(equipe)
+    wrapper.vm.newPenalite = -2
+    wrapper.vm.newCommentaire = 'Depassement interdit'
+    const modal = wrapper.findComponent({ name: 'BModal' })
+
+    modal.vm.$emit('ok')
+    await wrapper.vm.$nextTick()
+
+    expect(global.fetch).toHaveBeenCalledWith('http://classements.test/equipe/1', {
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ penalite: -2, penalite_commentaire: 'Depassement interdit' }),
+    })
+  })
+
+  it('INT-EQUIPE-PENALITE-005 pre-remplit le commentaire existant de l\'equipe', () => {
+    const equipe = createEquipe({ equipe: 1, penalite: -1, penalite_commentaire: 'Deja penalise' })
+    const wrapper = mountEquipePenalite(equipe)
+
+    expect(wrapper.vm.newCommentaire).toBe('Deja penalise')
   })
 })

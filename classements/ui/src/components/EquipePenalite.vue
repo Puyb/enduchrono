@@ -16,6 +16,16 @@
           required
         ></b-form-input>
       </b-form-group>
+      <b-form-group
+        id="input-group-penalite-commentaire"
+        label="Commentaire (optionnel):"
+        label-for="input-penalite-commentaire"
+      >
+        <b-form-textarea
+          id="input-penalite-commentaire"
+          v-model="newCommentaire"
+        ></b-form-textarea>
+      </b-form-group>
     </b-form>
     <b-table-simple>
       <b-tr>
@@ -53,6 +63,7 @@ export default {
   data() {
     return {
         newPenalite: this.equipe.penalite,
+        newCommentaire: this.equipe.penalite_commentaire || '',
     }
   },
   computed: {
@@ -84,7 +95,7 @@ export default {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ penalite: parseInt(this.newPenalite) }),
+        body: JSON.stringify({ penalite: parseInt(this.newPenalite), penalite_commentaire: this.newCommentaire || null }),
       })
     }
   }

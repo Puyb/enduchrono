@@ -41,8 +41,8 @@ async function createTempDb(displayName) {
   await sql.getKnex()('course').update({ name: displayName })
 }
 
-async function seedTeam(knex, { equipe, dossard, categorie = 'A', penalite = 0, nom }) {
-  await knex('equipes').insert({ equipe, nom: nom || `Equipe ${equipe}`, categorie, penalite, deleted: false })
+async function seedTeam(knex, { equipe, dossard, categorie = 'A', penalite = 0, penalite_commentaire = null, nom }) {
+  await knex('equipes').insert({ equipe, nom: nom || `Equipe ${equipe}`, categorie, penalite, penalite_commentaire, deleted: false })
   await knex('equipiers').insert({ equipe, dossard, nom: `Nom ${dossard}`, prenom: `Prenom ${dossard}`, deleted: false })
   await knex('transpondeurs').insert({ id: `TP-${dossard}`, dossard, deleted: false, vu: false, battery: null })
 }
@@ -86,7 +86,7 @@ describe('routes GET /export/*.csv', function () {
   it('exporte les equipes en CSV, triees par position generale, avec le nom de la course dans le nom de fichier', async () => {
     await createTempDb("Ma Course d'Ete")
     const knex = sql.getKnex()
-    await seedTeam(knex, { equipe: 1, dossard: 11, categorie: 'A', penalite: 1, nom: 'Team A' })
+    await seedTeam(knex, { equipe: 1, dossard: 11, categorie: 'A', penalite: 1, penalite_commentaire: 'Depassement interdit', nom: 'Team A' })
     await seedTeam(knex, { equipe: 2, dossard: 21, categorie: 'B', penalite: 0, nom: 'Team B' })
     await knex('tours').insert([
       { id: 1, numero: 1, transpondeur: 'TP-11', dossard: 11, timestamp: 1000, source: 'chrono', status: null, deleted: false },
@@ -107,8 +107,8 @@ describe('routes GET /export/*.csv', function () {
 
     const rows = parse(res.body, { columns: true })
     expect(rows).to.deep.equal([
-      { numero: '1', temps: '1.000', tours: '1', penalite: '1', position_generale: '1', position_categorie: '1', nom: 'Team A', categorie: 'A' },
-      { numero: '2', temps: '9.000', tours: '2', penalite: '', position_generale: '2', position_categorie: '1', nom: 'Team B', categorie: 'B' },
+      { numero: '1', temps: '1.000', tours: '1', penalite: '1', penalite_commentaire: 'Depassement interdit', position_generale: '1', position_categorie: '1', nom: 'Team A', categorie: 'A' },
+      { numero: '2', temps: '9.000', tours: '2', penalite: '', penalite_commentaire: '', position_generale: '2', position_categorie: '1', nom: 'Team B', categorie: 'B' },
     ])
   })
 
