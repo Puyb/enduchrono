@@ -46,6 +46,12 @@
           <EquipierChart :equipiers="equipiers" :tours="teamTours" :colors="equipierColors"></EquipierChart>
         </b-aspect>
       </b-tab>
+      <b-tab>
+        <template #title>
+          Actions <b-badge pill variant="light">{{ teamLogs.length }}</b-badge>
+        </template>
+        <LogsTable :logs="teamLogs" :fields="logsFields" />
+      </b-tab>
     </b-tabs>
   </div>
 </template>
@@ -58,11 +64,12 @@ import EquipeNonPartante from './EquipeNonPartante.vue'
 import EquipierTranspondeurs from './EquipierTranspondeurs.vue'
 import EquipierTour from './EquipierTour.vue'
 import ToursTable from './ToursTable.vue'
+import LogsTable from './LogsTable.vue'
 import { formatTime, formatDuree, insertTourDescending } from '../utils'
 import { bus } from '../eventBus'
 export default {
   name: 'Tours',
-  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipeNonPartante, EquipierTranspondeurs, EquipierTour, ToursTable },
+  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipeNonPartante, EquipierTranspondeurs, EquipierTour, ToursTable, LogsTable },
   props: {
     numero: null,
   },
@@ -72,6 +79,17 @@ export default {
       // store), recupere via GET /tours?equipe=... et tenu a jour par le bus
       // d'evenements local (voir eventBus.js).
       teamTours: [],
+      // Actions loguees pour cette equipe (GET /logs?equipe=...), affichees dans
+      // l'onglet "Actions" avec un badge de comptage.
+      teamLogs: [],
+      logsFields: [
+        { key: 'timestamp', label: 'Date/heure', sortable: true },
+        { key: 'elapsed', label: 'Temps écoulé', sortable: true },
+        { key: 'action', label: 'Action', sortable: true },
+        { key: 'object_type', label: 'Type' },
+        { key: 'object_id', label: 'Id' },
+        { key: 'data', label: 'Données' },
+      ],
       // Copie locale editable du commentaire : evite qu'une mise a jour de
       // l'equipe via websocket (autre action) n'ecrase la saisie en cours.
       commentaireDraft: '',
@@ -146,7 +164,7 @@ export default {
     },
   },
   watch: {
-    numero: { immediate: true, handler() { this.fetchTeamTours(); this.commentaireDraft = this.equipe?.commentaire || '' } },
+    numero: { immediate: true, handler() { this.fetchTeamTours(); this.fetchTeamLogs(); this.commentaireDraft = this.equipe?.commentaire || '' } },
     '$store.state.wsInitCount'() { this.fetchTeamTours() },
   },
   mounted() {
@@ -173,6 +191,7 @@ export default {
         },
         body: JSON.stringify({ commentaire: this.commentaireDraft || null }),
       })
+      this.fetchTeamLogs()
     },
     onTourEvent(tour, update) {
       if (String(tour.dossard).slice(0, -1) !== this.numero) return
@@ -197,6 +216,11 @@ export default {
         before = `${last.timestamp}:${last.id}`
       }
       this.teamTours = tours
+    },
+    async fetchTeamLogs() {
+      const res = await fetch(`${this.$root.URL}/logs?equipe=${this.numero}`)
+      const json = await res.json()
+      this.teamLogs = json.logs
     },
   }
 }

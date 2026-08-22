@@ -26,6 +26,7 @@ import Transpondeurs from './components/Transpondeurs.vue'
 import Equipes from './components/Equipes.vue'
 import Equipe from './components/Equipe.vue'
 import Stats from './components/Stats.vue'
+import Logs from './components/Logs.vue'
 import store from './store'
 
 const router = new VueRouter({
@@ -37,6 +38,7 @@ const router = new VueRouter({
     { name: 'categories', path: '/equipes/:currentCategorie', component: Equipes, props: true },
     { name: 'equipe', path: '/equipe/:numero', component: Equipe, props: true },
     { name: 'stats', path: '/stats', component: Stats },
+    { name: 'logs', path: '/logs', component: Logs },
   ],
 })
 

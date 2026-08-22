@@ -181,6 +181,26 @@ describe('models business behavior', () => {
       expect(db.state.inserts.map(i => i.table)).to.include.members(['transpondeurs', 'tours'])
     })
 
+    it('returns the created tour so callers (routes) can log/inspect it, even without a matching equipier', async () => {
+      await setStatus('COURSE')
+
+      const result = await models.addTour({ id: 10, transpondeur: 'UNKNOWN', timestamp: 12345 })
+
+      expect(result.tour).to.include({ numero: 10, transpondeur: 'UNKNOWN', dossard: null })
+      expect(result.equipes).to.deep.equal([])
+    })
+
+    it('returns the created tour and the list of changed equipes when a team is found', async () => {
+      registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      const result = await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000 })
+
+      expect(result.tour).to.include({ numero: 1, transpondeur: 'TP-11', dossard: 11, status: null })
+      expect(result.equipes.map(e => e.equipe)).to.deep.equal([1])
+    })
+
     it('detects duplicates with the 2-minute window and the 6h rule', async () => {
       const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
       registerTranspondeur('TP-11', 11)
@@ -365,6 +385,19 @@ describe('models business behavior', () => {
       expect(active).to.have.a.property('status', null)
       expect(team.tours.map(t => t.id)).to.deep.equal([3])
       expect(db.state.updates).to.have.length(0)
+    })
+
+    it('returns null when the lap is unknown or the transition is forbidden, and the tour otherwise', async () => {
+      const { team1, t1b } = setupTwoTeams()
+
+      expect(await models.modifTour(999999, true)).to.equal(null)
+
+      const ignored = createTour({ id: 500, dossard: 11, timestamp: 1300, status: 'ignore' })
+      tours.push(ignored)
+      expect(await models.modifTour(ignored.id, true)).to.equal(null)
+
+      expect(await models.modifTour(t1b.id, true)).to.equal(t1b)
+      expect(t1b.status).to.equal('deleted')
     })
   })
 

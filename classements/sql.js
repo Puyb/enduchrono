@@ -141,9 +141,15 @@ export async function initDb() {
       table.index(['timestamp', 'id']) // pagination par curseur (keyset) sur GET /tours
     })
     await knex.schema.createTable('log', (table) => {
-        table.integer('timestamp')
-        table.string('table')
-        table.string('values')
+        table.increments('id')
+        table.integer('timestamp') // horodatage reel (Date.now())
+        table.integer('elapsed').nullable() // temps ecoule depuis le depart course/test, cf tours.js getElapsed()
+        table.string('action')
+        table.string('object_type')
+        table.string('object_id').nullable()
+        table.integer('equipe').nullable()
+        table.text('data').nullable() // JSON des donnees modifiees
+        table.index(['equipe'])
     });
   }
 }

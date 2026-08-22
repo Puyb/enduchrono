@@ -89,7 +89,7 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
     await insertTour(tour)
     tours.dossard = null
     events.emit('tours', tour)
-    return
+    return { tour, equipes: [] }
   }
 
   const equipe = equipes[equipier.equipe]
@@ -107,10 +107,11 @@ export async function addTour({ id, transpondeur = null, dossard = null, timesta
 
   await insertTour(tour)
 
-  return Promise.all([
+  const [changedEquipes] = await Promise.all([
     notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe)),
     events.emit('tours', tour),
-  ])[0]
+  ])
+  return { tour, equipes: changedEquipes }
 }
 
 const registerTourStats = tour => {
@@ -217,11 +218,11 @@ export async function modifEquipe(id, values) {
 
 export async function modifTour(id, deleted) {
   const tour = _.find(tours, t => t.id === id)
-  if (!tour) return
+  if (!tour) return null
   console.log('modify', id, deleted, tour)
-  if (![null, 'duplicate', 'deleted'].includes(tour.status)) return
-  if (tour.status === 'deleted' && deleted) return
-  if (tour.status == null && !deleted) return
+  if (![null, 'duplicate', 'deleted'].includes(tour.status)) return null
+  if (tour.status === 'deleted' && deleted) return null
+  if (tour.status == null && !deleted) return null
   const oldStatus = tour.status
   tour.status = deleted ? 'deleted' : null
   const knex = getKnex()
@@ -244,10 +245,11 @@ export async function modifTour(id, deleted) {
 
     calculClassements(equipe)
   }
-  return Promise.all([
+  await Promise.all([
     notifyAndGetHasChanged(async equipe => events.emit('equipes', equipe)),
     events.emit('tours', tour, equipe, equipier, true),
-  ])[0]
+  ])
+  return tour
 }
 
 export async function deplaceEquipier(dossard, numero) {
