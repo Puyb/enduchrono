@@ -239,7 +239,7 @@ export async function modifTour(id, deleted) {
     } else if (!_.find(equipe.tours, t => t === tour)) {
       addTourToEquipe(equipe, tour)
     }
-    equipe.temps = _.last(equipe.tours).timestamp
+    equipe.temps = _.last(equipe.tours)?.timestamp || 0
     equipe._has_changed = true
     equipe._rank = rankValue(equipe)
 

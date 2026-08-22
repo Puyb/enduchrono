@@ -366,6 +366,20 @@ describe('models business behavior', () => {
       })
     })
 
+    it('removes the last remaining lap of a team without throwing, resetting temps to 0', async () => {
+      const { equipe: team } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A' })
+      const onlyTour = createTour({ id: 1, dossard: 11, timestamp: 1000 })
+      tours.push(onlyTour)
+      team.tours.push(onlyTour)
+      refreshClassements()
+
+      await models.modifTour(onlyTour.id, true)
+
+      expect(onlyTour).to.have.a.property('status', 'deleted')
+      expect(team.tours).to.have.length(0)
+      expect(team).to.have.a.property('temps', 0)
+    })
+
     it('ignores forbidden transitions without DB updates', async () => {
       const { equipe: team } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A' })
       const ignored = createTour({ id: 1, dossard: 11, timestamp: 1000, status: 'ignore' })

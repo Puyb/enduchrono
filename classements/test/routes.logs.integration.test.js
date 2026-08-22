@@ -110,20 +110,12 @@ describe('routes /tour, /equipe, /transpondeur -> journalisation dans log + GET 
   })
 
   it('journalise suppression puis restauration du tour, en reutilisant son id', async () => {
-    // deux tours pour l'equipe : supprimer le premier ne doit pas vider equipe.tours
-    // (edge case pre-existante de modifTour hors perimetre de cette fonctionnalite)
     await app.inject({
       method: 'POST',
       url: '/tour',
       payload: { id: 1, transpondeur: 'TP-11', dossard: 11, timestamp: 1000 },
     })
-    await app.inject({
-      method: 'POST',
-      url: '/tour',
-      payload: { id: 2, transpondeur: 'TP-11', dossard: 11, timestamp: 200000 },
-    })
-    const logsAfterAdds = await app.inject({ method: 'GET', url: '/logs' }).then(r => r.json().logs)
-    const addLog = logsAfterAdds.find(l => l.data.timestamp === 1000)
+    const [addLog] = await app.inject({ method: 'GET', url: '/logs' }).then(r => r.json().logs)
     const tourId = Number(addLog.object_id)
 
     const del = await app.inject({ method: 'DELETE', url: `/tour/${tourId}` })
@@ -139,7 +131,7 @@ describe('routes /tour, /equipe, /transpondeur -> journalisation dans log + GET 
     logs = await app.inject({ method: 'GET', url: '/logs' }).then(r => r.json().logs)
     expect(logs[0]).to.include({ action: "Restauration d'un tour", object_type: 'tour', object_id: String(tourId), equipe: 1 })
     expect(logs[0].data).to.deep.equal({ status: null })
-    expect(logs).to.have.length(4)
+    expect(logs).to.have.length(3)
   })
 
   it("ne journalise rien quand la modification de tour n'a pas d'effet (transition interdite)", async () => {
