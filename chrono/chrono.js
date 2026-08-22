@@ -16,6 +16,15 @@ const TRANSPONDEUR_REGEXP = /^<STA (\d+) (\d+):(\d+)'(\d+)"(\d+) (\d+) (\d+) (\d
 const STATUS_REGEXP = /^\[(\d+):(\d+)'(\d+)" (\d+) (\d+) (\d+) (\d+)\]/
 
 const socket = dgram.createSocket('udp4')
+
+// Le boitier chronelec peut regrouper plusieurs messages (un tour, une reponse
+// de status, ...) dans un seul paquet UDP, separes par "\r\n". Chaque message
+// doit etre traite independamment : les regex sont ancrees avec `^`, donc un
+// message qui n'est pas au tout debut du buffer ne matcherait jamais si on
+// testait le buffer entier tel quel (le tour ne serait alors ni detecte ni acke).
+let lastSeenTranspondeur = null
+let lastSeenTimestamp = null
+
 const pendingCommands = {
   passage: {
     regex: TRANSPONDEUR_REGEXP,
@@ -23,6 +32,12 @@ const pendingCommands = {
       const [, transpondeur, hour, minute, second, milli] = match
       await send(ACK)
       const timestamp = ((parseInt(hour) * 60 + parseInt(minute)) * 60 + parseInt(second)) * 1000 + parseInt(milli)
+      // Un tour renvoye par le boitier a l'identique (retransmission suite a un
+      // ACK manque) ne doit pas etre traite deux fois : pas d'enregistrement en
+      // base, pas de propagation vers classements.
+      if (transpondeur === lastSeenTranspondeur && timestamp === lastSeenTimestamp) return
+      lastSeenTranspondeur = transpondeur
+      lastSeenTimestamp = timestamp
       event.emit('passage', { transpondeur, timestamp })
     }
   }
@@ -32,11 +47,15 @@ const event = new EventEmitter()
 
 socket.on('message', async (message, rinfo) => {
   try {
-    console.log(`server got: ${message.toString()} from ${rinfo.address}:${rinfo.port}`)
-    for (const { regex, resolve } of Object.values(pendingCommands)) {
-      const match = message.toString().match(regex)
-      if (match) {
-        resolve(match)
+    const raw = message.toString()
+    console.log(`server got: ${raw} from ${rinfo.address}:${rinfo.port}`)
+    for (const frame of raw.split('\r\n')) {
+      if (!frame) continue
+      for (const { regex, resolve } of Object.values(pendingCommands)) {
+        const match = frame.match(regex)
+        if (match) {
+          await resolve(match)
+        }
       }
     }
   } catch (err) {
@@ -122,6 +141,9 @@ module.exports = {
       socket.once('listening', resolve)
       socket.bind(PORT, CHRONO_ADDRESS)
     })
+  },
+  async close() {
+    return new Promise(resolve => socket.close(resolve))
   },
   send,
   command,

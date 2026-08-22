@@ -17,4 +17,9 @@ describe('utils.formatDuree unit', () => {
   it('UNIT-UTILS-003 - cas limite: longue duree (heures)', () => {
     expect(formatDuree(7384001)).toBe('2:03:04.001')
   })
+
+  it('UNIT-UTILS-003 - regression: une duree negative (tour mal ordonne) ne boucle pas indefiniment', () => {
+    expect(formatDuree(-1)).toBe('')
+    expect(formatDuree(-65500)).toBe('')
+  })
 })

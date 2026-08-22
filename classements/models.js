@@ -55,7 +55,7 @@ export function isDuplicate(timestamp, equipe, offset = DUPLICATE_WINDOW_PERIOD)
   const lastTimestamp = _.last(equipe.tours)?.timestamp
   if (lastTimestamp > COURSE_DUREE && timestamp >= lastTimestamp) return true
   return equipe.tours.some(tour => {
-    return !tour.status && tour.timestamp < timestamp && timestamp < tour.timestamp + offset
+    return !tour.status && tour.timestamp <= timestamp && timestamp < tour.timestamp + offset
   })
 }
 
@@ -131,7 +131,14 @@ export const addTourToEquipe = (equipe, tour) => {
   } else {
     // ce tour n'est pas le plus récent, il faut l'insérer au bon endroit
     const index = _.findIndex(equipe.tours, t => t.timestamp > tour.timestamp)
-    equipe.tours.splice(index, 0, tour)
+    // aucun tour existant n'a un timestamp strictement supérieur (égalité avec
+    // le dernier tour) : il faut l'ajouter en fin de tableau, pas à l'index -1
+    // (qui pour `splice` désigne l'avant-dernière position, pas la fin)
+    if (index === -1) {
+      equipe.tours.push(tour)
+    } else {
+      equipe.tours.splice(index, 0, tour)
+    }
   }
   equipe.temps = Math.max(equipe.temps || 0, tour.timestamp)
   equipe._has_changed = true

@@ -14,7 +14,9 @@ export function parseTime(value) {
   return time
 }
 export function formatDuree(value) {
-    if (!value) return ''
+    // value négatif (tour mal ordonné) ferait boucler indéfiniment la division
+    // ci-dessous (Math.floor(-1 / 60) === -1, ne converge jamais vers 0)
+    if (!value || !Number.isFinite(value) || value < 0) return ''
     let s = `.${Math.floor(value % 1000).toString().padStart(3, '0')}`
     value = Math.floor(value / 1000)
     while (value) {

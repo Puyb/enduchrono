@@ -66,6 +66,12 @@ describe('isDuplicate', function()  {
     const result = isDuplicate(1500, team, DUPLICATE_WINDOW_PERIOD)
     expect(result).to.be.false
   })
+
+  it('should return true for a tour sharing the exact same timestamp as an existing one', function()  {
+    team.tours = [{ timestamp: 900, status: null }]
+    const result = isDuplicate(900, team, DUPLICATE_WINDOW_PERIOD)
+    expect(result).to.be.true
+  })
 })
 
 describe('rankValue', function() {
@@ -205,6 +211,18 @@ describe("addTourToEquipe", () => {
     addTourToEquipe(equipe, newTour);
 
     expect(equipe.temps).to.equal(3000); // Temps should remain the same
+  });
+
+  it("should append the tour at the end, not before the last one, when its timestamp ties the last tour's", () => {
+    // regression: findIndex returning -1 (no tour strictly after) used to be
+    // passed straight to splice(-1, 0, tour), which inserts before the last
+    // element instead of appending, silently reordering the team's laps and
+    // producing a spurious 0s lap for what was actually the last one
+    const newTour = { timestamp: 3000 };
+    addTourToEquipe(equipe, newTour);
+
+    expect(equipe.tours.length).to.equal(4);
+    expect(_.last(equipe.tours)).to.deep.equal(newTour);
   });
 });
 
