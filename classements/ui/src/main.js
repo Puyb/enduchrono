@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import App from './App.vue'
-import { BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFlagFill, BIconArrowRightShort, BIconTrash, BIconPower, BIconRecycle } from 'bootstrap-vue'
+import { BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFlagFill, BIconArrowRightShort, BIconTrash, BIconPower, BIconRecycle, BIconInfoCircleFill } from 'bootstrap-vue'
 import VueRouter from 'vue-router'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap-vue/dist/bootstrap-vue.css'
@@ -16,6 +16,7 @@ Vue.component('BIconArrowRightShort', BIconArrowRightShort)
 Vue.component('BIconTrash', BIconTrash)
 Vue.component('BIconPower', BIconPower)
 Vue.component('BIconRecycle', BIconRecycle)
+Vue.component('BIconInfoCircleFill', BIconInfoCircleFill)
 Vue.use(VueRouter)
 
 Vue.config.productionTip = false

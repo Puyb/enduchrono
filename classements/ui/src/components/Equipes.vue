@@ -34,6 +34,7 @@
           primary-key="equipe" :tbody-transition-props="transProps" :tbody-tr-class="rowClass" :perPage="perPage" :currentPage="currentPage">
         <template #cell(equipe)="data">
             <b-link @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</b-link>
+            <BIconInfoCircleFill v-if="data.item.commentaire" :title="data.item.commentaire" class="text-info ml-1"></BIconInfoCircleFill>
         </template>
         <template #cell(nom)="data">
             <b-link @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</b-link>
