@@ -136,6 +136,41 @@ describe('integration sqlite <-> memoire (backend)', function () {
     expect(await sql.list()).to.include(filename)
   })
 
+  it('persiste et recharge non_partante/commentaire/telephone des equipes', async () => {
+    const fixture = await createTempDb('it-equipe-fields')
+    const knex = sql.getKnex()
+
+    await knex('equipes').insert({
+      equipe: 1,
+      nom: 'Equipe 1',
+      categorie: 'A',
+      penalite: 0,
+      non_partante: true,
+      commentaire: 'Ne repond plus au telephone',
+      telephone: '0600000000',
+      deleted: false,
+    })
+    await knex('equipes').insert({
+      equipe: 2,
+      nom: 'Equipe 2',
+      categorie: 'A',
+      penalite: 0,
+      deleted: false,
+    })
+
+    await sql.close()
+    await sql.open(fixture.filename)
+
+    expect(equipes[1]).to.include({
+      non_partante: 1,
+      commentaire: 'Ne repond plus au telephone',
+      telephone: '0600000000',
+    })
+    expect(equipes[2].non_partante).to.equal(0)
+    expect(equipes[2].commentaire).to.equal(null)
+    expect(equipes[2].telephone).to.equal(null)
+  })
+
   it('load reconstruit equipes/equipiers/transpondeurs/tours/categories', async () => {
     await createTempDb('it-load-rebuild')
     const knex = sql.getKnex()

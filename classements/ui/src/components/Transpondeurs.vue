@@ -148,6 +148,7 @@ export default {
       if (!item || type !== 'row') return
       if (!item.dossard) return 'table-danger'
       if (item.deleted) return 'table-warning'
+      if (this.$store.state.equipes[String(item.dossard).slice(0, -1)]?.non_partante) return 'table-secondary'
     },
     showEquipe(dossard) {
       this.$router.push(`/equipe/${String(dossard).slice(0, -1)}`)

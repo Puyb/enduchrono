@@ -7,10 +7,21 @@
             <b-tr><b-th>Equipe</b-th><b-td>{{ numero }}</b-td></b-tr>
             <b-tr><b-th>Nom</b-th><b-td>{{ equipe.nom }}</b-td></b-tr>
             <b-tr><b-th>Categorie</b-th><b-td>{{ equipe.categorie }} <EquipeCategorie :equipe="equipe" /></b-td></b-tr>
+            <b-tr v-if="equipe.telephone"><b-th>Téléphone</b-th><b-td>{{ equipe.telephone }}</b-td></b-tr>
             <b-tr><b-th>Classement général</b-th><b-td>{{ equipe.position_general }}</b-td></b-tr>
             <b-tr><b-th>Classement categorie</b-th><b-td>{{ equipe.position_categorie }}</b-td></b-tr>
             <b-tr><b-th>Tours</b-th><b-td>{{ equipe.tours + equipe.penalite }} <EquipePenalite :equipe="equipe"></EquipePenalite></b-td></b-tr>
             <b-tr><b-th>Dernier passage</b-th><b-td>{{ formatTime(equipe.temps) }}</b-td></b-tr>
+            <b-tr><b-th>Statut</b-th><b-td><EquipeNonPartante :equipe="equipe" /></b-td></b-tr>
+            <b-tr>
+              <b-th>Commentaire</b-th>
+              <b-td>
+                <b-form-textarea
+                  v-model="commentaireDraft"
+                  @blur="saveCommentaire"
+                ></b-form-textarea>
+              </b-td>
+            </b-tr>
           </b-table-simple>
         </b-col>
         <b-col cols="8">
@@ -43,6 +54,7 @@
 import EquipierChart from './EquipierChart.vue'
 import EquipePenalite from './EquipePenalite.vue'
 import EquipeCategorie from './EquipeCategorie.vue'
+import EquipeNonPartante from './EquipeNonPartante.vue'
 import EquipierTranspondeurs from './EquipierTranspondeurs.vue'
 import EquipierTour from './EquipierTour.vue'
 import ToursTable from './ToursTable.vue'
@@ -50,7 +62,7 @@ import { formatTime, formatDuree, insertTourDescending } from '../utils'
 import { bus } from '../eventBus'
 export default {
   name: 'Tours',
-  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, EquipierTour, ToursTable },
+  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipeNonPartante, EquipierTranspondeurs, EquipierTour, ToursTable },
   props: {
     numero: null,
   },
@@ -60,6 +72,9 @@ export default {
       // store), recupere via GET /tours?equipe=... et tenu a jour par le bus
       // d'evenements local (voir eventBus.js).
       teamTours: [],
+      // Copie locale editable du commentaire : evite qu'une mise a jour de
+      // l'equipe via websocket (autre action) n'ecrase la saisie en cours.
+      commentaireDraft: '',
       equipiersFields: [
         'dossard',
         'nom',
@@ -131,7 +146,7 @@ export default {
     },
   },
   watch: {
-    numero: { immediate: true, handler() { this.fetchTeamTours() } },
+    numero: { immediate: true, handler() { this.fetchTeamTours(); this.commentaireDraft = this.equipe?.commentaire || '' } },
     '$store.state.wsInitCount'() { this.fetchTeamTours() },
   },
   mounted() {
@@ -150,6 +165,15 @@ export default {
       return classes
     },
     formatTime,
+    async saveCommentaire() {
+      await fetch(`${this.$root.URL}/equipe/${this.equipe.equipe}`, {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ commentaire: this.commentaireDraft || null }),
+      })
+    },
     onTourEvent(tour, update) {
       if (String(tour.dossard).slice(0, -1) !== this.numero) return
       const existing = update && this.teamTours.find(t => t.id === tour.id)

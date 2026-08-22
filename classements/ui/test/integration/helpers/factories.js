@@ -6,6 +6,8 @@ function createEquipe(overrides = {}) {
     tours: 10,
     penalite: 0,
     penalite_commentaire: '',
+    non_partante: false,
+    commentaire: '',
     temps: 3600000,
     position_general: 1,
     position_categorie: 1,

@@ -403,6 +403,41 @@ describe('models business behavior', () => {
       })
     })
 
+    it('toggles the non_partante status', async () => {
+      const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A', penalite: 0 })
+
+      await models.modifEquipe(1, { non_partante: true })
+
+      expect(team1).to.have.a.property('non_partante', true)
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { non_partante: true },
+      })
+
+      await models.modifEquipe(1, { non_partante: false })
+
+      expect(team1).to.have.a.property('non_partante', false)
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { non_partante: false },
+      })
+    })
+
+    it('stores a free-text comment', async () => {
+      const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A', penalite: 0 })
+
+      await models.modifEquipe(1, { commentaire: 'A contacter avant le depart' })
+
+      expect(team1).to.have.a.property('commentaire', 'A contacter avant le depart')
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { commentaire: 'A contacter avant le depart' },
+      })
+    })
+
     it('moves a team between categories and updates category positions', async () => {
       const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A' })
       const { equipe: team2 } = registerEquipe({ equipeId: 2, dossard: 21, categorie: 'A' })

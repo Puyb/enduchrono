@@ -196,6 +196,12 @@ export async function modifEquipe(id, values) {
   if ('penalite_commentaire' in values) {
     equipe.penalite_commentaire = values.penalite_commentaire
   }
+  if ('non_partante' in values) {
+    equipe.non_partante = values.non_partante
+  }
+  if ('commentaire' in values) {
+    equipe.commentaire = values.commentaire
+  }
   if (values.categorie) {
     _.pull(categories[equipe.categorie], equipe)
     calculClassementCategory(equipe.categorie)
