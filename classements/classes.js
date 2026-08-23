@@ -144,3 +144,5 @@ export class Transpondeur extends Base {
 }
 
 export const isSameEquipe = (t1, t2 = {}) => String(t1.dossard).slice(0, -1) === String(t2.dossard).slice(0, -1)
+
+export const equipeIdFromDossard = dossard => dossard == null ? null : Number(String(dossard).slice(0, -1))

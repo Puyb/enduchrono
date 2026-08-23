@@ -3,6 +3,7 @@ import * as models from '../models.js'
 import { parse } from 'csv-parse/sync'
 import { start } from '../tours.js'
 import * as sql from '../sql.js'
+import { logAction } from '../actionLog.js'
 
 export default async function route(fastify, opts) {
   fastify.post('/import', async function (request, reply) {
@@ -25,6 +26,7 @@ export default async function route(fastify, opts) {
     await sql.load()
     await start()
     await models.startTest()
+    await logAction({ action: 'Import de la course', objectType: 'course', data: { name } })
 
     sql.events.emit('open')
 

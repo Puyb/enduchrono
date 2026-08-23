@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { Equipe, Tour, equipes } from '../classes.js';
+import { Equipe, Tour, equipes, equipeIdFromDossard } from '../classes.js';
 
 describe('Equipe - addMonitoredValue', () => {
   let equipe;
@@ -87,4 +87,16 @@ describe('Tour - duree', () => {
     expect(equipe.tours[2].duree).to.equal(3000)
   })
 
+})
+
+describe('equipeIdFromDossard', () => {
+  it('strips the last digit of the dossard to find the equipe id', () => {
+    expect(equipeIdFromDossard(11)).to.equal(1)
+    expect(equipeIdFromDossard(123)).to.equal(12)
+  })
+
+  it('returns null when there is no dossard', () => {
+    expect(equipeIdFromDossard(null)).to.equal(null)
+    expect(equipeIdFromDossard(undefined)).to.equal(null)
+  })
 })

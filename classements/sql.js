@@ -96,6 +96,10 @@ export async function initDb() {
       table.string('gerant_code_postal')
       table.string('gerant_code_pays')
       table.integer('penalite').defaultTo(0)
+      table.text('penalite_commentaire').nullable()
+      table.boolean('non_partante').defaultTo(false)
+      table.text('commentaire').nullable()
+      table.string('telephone').nullable()
       table.boolean('deleted')
       table.unique(['equipe'])
     })
@@ -140,9 +144,15 @@ export async function initDb() {
       table.index(['timestamp', 'id']) // pagination par curseur (keyset) sur GET /tours
     })
     await knex.schema.createTable('log', (table) => {
-        table.integer('timestamp')
-        table.string('table')
-        table.string('values')
+        table.increments('id')
+        table.integer('timestamp') // horodatage reel (Date.now())
+        table.integer('elapsed').nullable() // temps ecoule depuis le depart course/test, cf tours.js getElapsed()
+        table.string('action')
+        table.string('object_type')
+        table.string('object_id').nullable()
+        table.integer('equipe').nullable()
+        table.text('data').nullable() // JSON des donnees modifiees
+        table.index(['equipe'])
     });
   }
 }

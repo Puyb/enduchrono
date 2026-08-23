@@ -27,6 +27,10 @@ export function formatDuree(value) {
     if (s[0] === '.') return `0${s}`
     return s
 }
+export function formatDateTime(value) {
+    if (!value || !Number.isFinite(value)) return ''
+    return new Date(value).toLocaleString()
+}
 export function rankValue (equipe) {
     return -((equipe.tours || 0) + equipe.penalite) * 100 * 3600 * 1000 + (equipe.temps || 0)
 }

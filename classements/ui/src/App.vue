@@ -12,6 +12,7 @@
             <b-nav-item :active="['equipe', 'equipes', 'categories'].includes($route.name)" to="/equipes">Équipes / Classements <b-badge pill variant="light">{{ Object.keys($store.state.equipes).length }}</b-badge></b-nav-item>
             <b-nav-item :active="$route.name === 'transpondeurs'" to="/transpondeurs">Transpondeurs <b-badge pill variant="light">{{ transpondeursAll.length }}</b-badge></b-nav-item>
             <b-nav-item :active="$route.name === 'stats'" to="/stats">Stats</b-nav-item>
+            <b-nav-item :active="$route.name === 'logs'" to="/logs">Actions</b-nav-item>
           </b-navbar-nav>
           <b-navbar-nav class="ml-auto" id="status">
             <b-nav-text v-if="$store.state.course.status === 'TEST'">Test avant course</b-nav-text>

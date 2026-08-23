@@ -31,9 +31,10 @@
     </div>
     <div class="d-flex flex-column flex-fill" style="overflow: scroll; position: relative;">
       <b-table id="equipes-table" striped hover small sticky-header="100vh" :items="equipes" :fields="fields"
-          primary-key="equipe" :tbody-transition-props="transProps" :perPage="perPage" :currentPage="currentPage">
+          primary-key="equipe" :tbody-transition-props="transProps" :tbody-tr-class="rowClass" :perPage="perPage" :currentPage="currentPage">
         <template #cell(equipe)="data">
             <b-link @click="showEquipe(data.item.equipe)">{{ data.item.equipe }}</b-link>
+            <BIconInfoCircleFill v-if="data.item.commentaire" :title="data.item.commentaire" class="text-info ml-1"></BIconInfoCircleFill>
         </template>
         <template #cell(nom)="data">
             <b-link @click="showEquipe(data.item.equipe)">{{ data.item.nom }}</b-link>
@@ -127,6 +128,10 @@ export default {
     }
   },
   methods: {
+    rowClass(item, type) {
+      if (!item || type !== 'row') return
+      if (item.non_partante) return 'table-secondary'
+    },
     showEquipe(numero) {
       this.$router.push(`/equipe/${numero}`)
     }

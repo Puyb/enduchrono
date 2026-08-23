@@ -7,10 +7,21 @@
             <b-tr><b-th>Equipe</b-th><b-td>{{ numero }}</b-td></b-tr>
             <b-tr><b-th>Nom</b-th><b-td>{{ equipe.nom }}</b-td></b-tr>
             <b-tr><b-th>Categorie</b-th><b-td>{{ equipe.categorie }} <EquipeCategorie :equipe="equipe" /></b-td></b-tr>
+            <b-tr v-if="equipe.telephone"><b-th>Téléphone</b-th><b-td>{{ equipe.telephone }}</b-td></b-tr>
             <b-tr><b-th>Classement général</b-th><b-td>{{ equipe.position_general }}</b-td></b-tr>
             <b-tr><b-th>Classement categorie</b-th><b-td>{{ equipe.position_categorie }}</b-td></b-tr>
             <b-tr><b-th>Tours</b-th><b-td>{{ equipe.tours + equipe.penalite }} <EquipePenalite :equipe="equipe"></EquipePenalite></b-td></b-tr>
             <b-tr><b-th>Dernier passage</b-th><b-td>{{ formatTime(equipe.temps) }}</b-td></b-tr>
+            <b-tr><b-th>Statut</b-th><b-td><EquipeNonPartante :equipe="equipe" /></b-td></b-tr>
+            <b-tr>
+              <b-th>Commentaire</b-th>
+              <b-td>
+                <b-form-textarea
+                  v-model="commentaireDraft"
+                  @blur="saveCommentaire"
+                ></b-form-textarea>
+              </b-td>
+            </b-tr>
           </b-table-simple>
         </b-col>
         <b-col cols="8">
@@ -35,6 +46,12 @@
           <EquipierChart :equipiers="equipiers" :tours="teamTours" :colors="equipierColors"></EquipierChart>
         </b-aspect>
       </b-tab>
+      <b-tab>
+        <template #title>
+          Actions <b-badge pill variant="light">{{ teamLogs.length }}</b-badge>
+        </template>
+        <LogsTable :logs="teamLogs" :fields="logsFields" />
+      </b-tab>
     </b-tabs>
     <TranspondeurChart :transpondeurId="selectedTranspondeurId" @close="selectedTranspondeurId = null" />
   </div>
@@ -44,15 +61,17 @@
 import EquipierChart from './EquipierChart.vue'
 import EquipePenalite from './EquipePenalite.vue'
 import EquipeCategorie from './EquipeCategorie.vue'
+import EquipeNonPartante from './EquipeNonPartante.vue'
 import EquipierTranspondeurs from './EquipierTranspondeurs.vue'
 import EquipierTour from './EquipierTour.vue'
 import ToursTable from './ToursTable.vue'
+import LogsTable from './LogsTable.vue'
 import TranspondeurChart from './TranspondeurChart.vue'
 import { formatTime, formatDuree, insertTourDescending } from '../utils'
 import { bus } from '../eventBus'
 export default {
   name: 'Tours',
-  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, EquipierTour, ToursTable, TranspondeurChart },
+  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipeNonPartante, EquipierTranspondeurs, EquipierTour, ToursTable, TranspondeurChart, LogsTable },
   props: {
     numero: null,
   },
@@ -63,6 +82,20 @@ export default {
       // store), recupere via GET /tours?equipe=... et tenu a jour par le bus
       // d'evenements local (voir eventBus.js).
       teamTours: [],
+      // Actions loguees pour cette equipe (GET /logs?equipe=...), affichees dans
+      // l'onglet "Actions" avec un badge de comptage.
+      teamLogs: [],
+      logsFields: [
+        { key: 'timestamp', label: 'Date/heure', sortable: true },
+        { key: 'elapsed', label: 'Temps écoulé', sortable: true },
+        { key: 'action', label: 'Action', sortable: true },
+        { key: 'object_type', label: 'Type' },
+        { key: 'object_id', label: 'Id' },
+        { key: 'data', label: 'Données' },
+      ],
+      // Copie locale editable du commentaire : evite qu'une mise a jour de
+      // l'equipe via websocket (autre action) n'ecrase la saisie en cours.
+      commentaireDraft: '',
       equipiersFields: [
         'dossard',
         'nom',
@@ -146,7 +179,7 @@ export default {
     },
   },
   watch: {
-    numero: { immediate: true, handler() { this.fetchTeamTours() } },
+    numero: { immediate: true, handler() { this.fetchTeamTours(); this.fetchTeamLogs(); this.commentaireDraft = this.equipe?.commentaire || '' } },
     '$store.state.wsInitCount'() { this.fetchTeamTours() },
   },
   mounted() {
@@ -165,6 +198,16 @@ export default {
       return classes
     },
     formatTime,
+    async saveCommentaire() {
+      await fetch(`${this.$root.URL}/equipe/${this.equipe.equipe}`, {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ commentaire: this.commentaireDraft || null }),
+      })
+      this.fetchTeamLogs()
+    },
     onTourEvent(tour, update) {
       if (String(tour.dossard).slice(0, -1) !== this.numero) return
       const existing = update && this.teamTours.find(t => t.id === tour.id)
@@ -188,6 +231,11 @@ export default {
         before = `${last.timestamp}:${last.id}`
       }
       this.teamTours = tours
+    },
+    async fetchTeamLogs() {
+      const res = await fetch(`${this.$root.URL}/logs?equipe=${this.numero}`)
+      const json = await res.json()
+      this.teamLogs = json.logs
     },
   }
 }

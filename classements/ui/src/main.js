@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import App from './App.vue'
 import {
-  BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFlagFill, BIconArrowRightShort, BIconTrash, BIconPower, BIconRecycle,
+  BootstrapVue, BIcon, BIconPencil, BIconPlus, BIconPersonXFill, BIconFlagFill, BIconArrowRightShort, BIconTrash, BIconPower, BIconRecycle, BIconInfoCircleFill,
   BIconBattery, BIconBatteryHalf, BIconBatteryFull,
   BIconReception0, BIconReception1, BIconReception2, BIconReception3, BIconReception4,
   BIconDashCircle,
@@ -21,6 +21,7 @@ Vue.component('BIconArrowRightShort', BIconArrowRightShort)
 Vue.component('BIconTrash', BIconTrash)
 Vue.component('BIconPower', BIconPower)
 Vue.component('BIconRecycle', BIconRecycle)
+Vue.component('BIconInfoCircleFill', BIconInfoCircleFill)
 Vue.component('BIconBattery', BIconBattery)
 Vue.component('BIconBatteryHalf', BIconBatteryHalf)
 Vue.component('BIconBatteryFull', BIconBatteryFull)
@@ -39,6 +40,7 @@ import Transpondeurs from './components/Transpondeurs.vue'
 import Equipes from './components/Equipes.vue'
 import Equipe from './components/Equipe.vue'
 import Stats from './components/Stats.vue'
+import Logs from './components/Logs.vue'
 import store from './store'
 
 const router = new VueRouter({
@@ -50,6 +52,7 @@ const router = new VueRouter({
     { name: 'categories', path: '/equipes/:currentCategorie', component: Equipes, props: true },
     { name: 'equipe', path: '/equipe/:numero', component: Equipe, props: true },
     { name: 'stats', path: '/stats', component: Stats },
+    { name: 'logs', path: '/logs', component: Logs },
   ],
 })
 

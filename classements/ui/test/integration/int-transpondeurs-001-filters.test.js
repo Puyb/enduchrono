@@ -86,6 +86,15 @@ describe('Transpondeurs integration', () => {
     expect(wrapper.vm.rowClass(transpondeurs[0], 'row')).toBeUndefined()
   })
 
+  it('INT-TRANSPONDEURS-009 rowClass grise les transpondeurs d\'une equipe non partante', () => {
+    const state = {
+      tours,
+      equipes: { 1: createEquipe({ equipe: 1, non_partante: true }) },
+    }
+    const { wrapper } = mountTranspondeurs(transpondeurs, state)
+    expect(wrapper.vm.rowClass(transpondeurs[0], 'row')).toBe('table-secondary')
+  })
+
   it('INT-TRANSPONDEURS-008 showEquipe navigue vers la fiche equipe depuis le dossard', () => {
     const { wrapper, $router } = mountTranspondeurs(transpondeurs, { tours })
     wrapper.vm.showEquipe(11)

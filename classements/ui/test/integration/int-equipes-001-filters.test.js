@@ -61,4 +61,10 @@ describe('Equipes integration', () => {
     wrapper.vm.search = 'equipe 3'
     expect(wrapper.vm.equipes).toEqual([])
   })
+
+  it('INT-EQUIPES-008 rowClass grise les equipes non partantes', () => {
+    const wrapper = mountEquipes(equipes, equipiers)
+    expect(wrapper.vm.rowClass(equipes[1], 'row')).toBeUndefined()
+    expect(wrapper.vm.rowClass({ ...equipes[1], non_partante: true }, 'row')).toBe('table-secondary')
+  })
 })

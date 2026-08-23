@@ -79,7 +79,24 @@ export async function waitForStatus(wanted) {
   })
 }
 
-export async function start() { return command('start') }
-export async function stop() { return command('stop') }
+// Top depart en horloge murale, utilise comme reference pour le temps ecoule
+// des actions loguees (actionLog.js) : coherent avec le timestamp (elapsed)
+// des tours, remis a zero a chaque (re)depart test/course.
+let startedAt = null
+
+export async function start() {
+  const result = await command('start')
+  startedAt = Date.now()
+  return result
+}
+export async function stop() {
+  const result = await command('stop')
+  startedAt = null
+  return result
+}
+
+export function getElapsed() {
+  return startedAt == null ? null : Date.now() - startedAt
+}
 
 export function getConnected() { return connected }

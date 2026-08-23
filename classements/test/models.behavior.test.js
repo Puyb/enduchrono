@@ -184,6 +184,26 @@ describe('models business behavior', () => {
       expect(db.state.inserts.map(i => i.table)).to.include.members(['transpondeurs', 'tours'])
     })
 
+    it('returns the created tour so callers (routes) can log/inspect it, even without a matching equipier', async () => {
+      await setStatus('COURSE')
+
+      const result = await models.addTour({ id: 10, transpondeur: 'UNKNOWN', timestamp: 12345 })
+
+      expect(result.tour).to.include({ numero: 10, transpondeur: 'UNKNOWN', dossard: null })
+      expect(result.equipes).to.deep.equal([])
+    })
+
+    it('returns the created tour and the list of changed equipes when a team is found', async () => {
+      registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      const result = await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000 })
+
+      expect(result.tour).to.include({ numero: 1, transpondeur: 'TP-11', dossard: 11, status: null })
+      expect(result.equipes.map(e => e.equipe)).to.deep.equal([1])
+    })
+
     it('detects duplicates with the 2-minute window and the 6h rule', async () => {
       const { equipe } = registerEquipe({ equipeId: 1, dossard: 11 })
       registerTranspondeur('TP-11', 11)
@@ -383,6 +403,20 @@ describe('models business behavior', () => {
       })
     })
 
+    it('removes the last remaining lap of a team without throwing, resetting temps to 0', async () => {
+      const { equipe: team } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A' })
+      const onlyTour = createTour({ id: 1, dossard: 11, timestamp: 1000 })
+      tours.push(onlyTour)
+      team.tours.push(onlyTour)
+      refreshClassements()
+
+      await models.modifTour(onlyTour.id, true)
+
+      expect(onlyTour).to.have.a.property('status', 'deleted')
+      expect(team.tours).to.have.length(0)
+      expect(team).to.have.a.property('temps', 0)
+    })
+
     it('ignores forbidden transitions without DB updates', async () => {
       const { equipe: team } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A' })
       const ignored = createTour({ id: 1, dossard: 11, timestamp: 1000, status: 'ignore' })
@@ -402,6 +436,19 @@ describe('models business behavior', () => {
       expect(active).to.have.a.property('status', null)
       expect(team.tours.map(t => t.id)).to.deep.equal([3])
       expect(db.state.updates).to.have.length(0)
+    })
+
+    it('returns null when the lap is unknown or the transition is forbidden, and the tour otherwise', async () => {
+      const { team1, t1b } = setupTwoTeams()
+
+      expect(await models.modifTour(999999, true)).to.equal(null)
+
+      const ignored = createTour({ id: 500, dossard: 11, timestamp: 1300, status: 'ignore' })
+      tours.push(ignored)
+      expect(await models.modifTour(ignored.id, true)).to.equal(null)
+
+      expect(await models.modifTour(t1b.id, true)).to.equal(t1b)
+      expect(t1b.status).to.equal('deleted')
     })
   })
 
@@ -424,6 +471,54 @@ describe('models business behavior', () => {
         table: 'equipes',
         where: { equipe: 1 },
         values: { penalite: -1 },
+      })
+    })
+
+    it('stores an optional comment alongside the penalty', async () => {
+      const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A', penalite: 0 })
+
+      await models.modifEquipe(1, { penalite: -2, penalite_commentaire: 'Depassement interdit' })
+
+      expect(team1).to.have.a.property('penalite_commentaire', 'Depassement interdit')
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { penalite: -2, penalite_commentaire: 'Depassement interdit' },
+      })
+    })
+
+    it('toggles the non_partante status', async () => {
+      const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A', penalite: 0 })
+
+      await models.modifEquipe(1, { non_partante: true })
+
+      expect(team1).to.have.a.property('non_partante', true)
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { non_partante: true },
+      })
+
+      await models.modifEquipe(1, { non_partante: false })
+
+      expect(team1).to.have.a.property('non_partante', false)
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { non_partante: false },
+      })
+    })
+
+    it('stores a free-text comment', async () => {
+      const { equipe: team1 } = registerEquipe({ equipeId: 1, dossard: 11, categorie: 'A', penalite: 0 })
+
+      await models.modifEquipe(1, { commentaire: 'A contacter avant le depart' })
+
+      expect(team1).to.have.a.property('commentaire', 'A contacter avant le depart')
+      expect(db.state.updates).to.deep.include({
+        table: 'equipes',
+        where: { equipe: 1 },
+        values: { commentaire: 'A contacter avant le depart' },
       })
     })
 
