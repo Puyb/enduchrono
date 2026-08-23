@@ -47,13 +47,27 @@
         {{ formatDuree(data.item.newDuree) }}
       </span>
     </template>
+    <template #cell(signal)="data">
+      <SignalIcon :value="data.item.signal" :transpondeurId="data.item.transpondeur" @click="$emit('show-transpondeur', $event)" />
+      {{ data.item.signal }}
+    </template>
+    <template #cell(battery)="data">
+      <BatteryIcon :value="data.item.battery" :transpondeurId="data.item.transpondeur" @click="$emit('show-transpondeur', $event)" />
+      {{ data.item.battery }}
+    </template>
+    <template #cell(detectionCount)="data">
+      {{ data.item.detectionCount }}
+    </template>
   </b-table>
 </template>
 
 <script>
 import { formatTime, formatDuree } from '../utils'
+import SignalIcon from './SignalIcon.vue'
+import BatteryIcon from './BatteryIcon.vue'
 export default {
   name: 'ToursTable',
+  components: { SignalIcon, BatteryIcon },
   props: {
     tours: [],
     fields: {},

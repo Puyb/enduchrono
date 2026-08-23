@@ -97,11 +97,18 @@ async function queryDb(dbPath, query) {
   }
 }
 
-async function addTourNow(transpondeur, timestamp) {
+async function addTourNow(transpondeur, timestamp, telemetry = {}) {
   await post(`${SIM_URL}/tours/add`, {
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ transpondeur, timestamp })
+    body: JSON.stringify({ transpondeur, timestamp, ...telemetry })
   })
+}
+
+// Le flux live (chrono/app.js) enveloppe la trame dans { passage: {...} }, le rejeu
+// depuis sqlite (model.getPassages) renvoie la ligne telle quelle : meme forme que
+// getTranspondeurs() ci-dessus, pour les tests qui ont besoin des champs telemetrie.
+function getPassage(event) {
+  return event.passage || event
 }
 
 async function addToursRaw(payload) {
@@ -328,6 +335,55 @@ describe('chrono functional - start/stop UDP (docker)', function () {
     })
 
     expect(count, `expected at least 5 tours in db, got ${count}`).to.be.at.least(5)
+  })
+
+  it('should persist and forward signal/detectionCount/battery telemetry for a passage', async () => {
+    const transpondeur = `${Date.now()}21`
+
+    await startSession()
+
+    const events = await collectTours({
+      duration: 1500,
+      onOpen: async () => {
+        await addTourNow(transpondeur, 100, { signal: 42, detectionCount: 3, battery: 1 })
+      }
+    })
+
+    const passageEvent = events.find(e => getPassage(e).transpondeur === transpondeur)
+    expect(passageEvent, `no websocket event received for transpondeur ${transpondeur}`).to.exist
+    expect(getPassage(passageEvent)).to.include({ signal: 42, detectionCount: 3, battery: 1 })
+
+    expect(fs.existsSync(CURRENT_DB_PATH), 'current.db does not exist during telemetry test').to.equal(true)
+    const dbPath = fs.realpathSync(CURRENT_DB_PATH)
+
+    const row = await waitFor(async () => {
+      const rows = await queryDb(dbPath, knex => {
+        return knex('passages').select('signal', 'detectionCount', 'battery').where({ transpondeur })
+      })
+      return rows[0] || null
+    }, 8000)
+
+    expect(row).to.include({ signal: 42, detectionCount: 3, battery: 1 })
+  })
+
+  it('should emit only one event for an immediately repeated identical raw frame', async () => {
+    const base = Date.now().toString()
+    const transpondeur = `${base}31`
+
+    await startSession()
+
+    const events = await collectTours({
+      duration: 1500,
+      onOpen: async () => {
+        // meme trame envoyee 2 fois consecutivement : chrono.js doit dedoublonner
+        // sur (transpondeur, timestamp) via lastSeenTranspondeur/lastSeenTimestamp
+        const frame = `<STA ${transpondeur} 00:00'05"000 99 01 3 1579>`
+        await addToursRaw(`${frame}\n${frame}`)
+      }
+    })
+
+    const matching = events.filter(e => getPassage(e).transpondeur === transpondeur)
+    expect(matching, `expected exactly one event for ${transpondeur}, got ${matching.length}`).to.have.length(1)
   })
 
   it('should replay tours from querystring `from` and continue live stream', async () => {

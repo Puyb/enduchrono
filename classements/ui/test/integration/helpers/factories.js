@@ -33,6 +33,9 @@ function createTour(overrides = {}) {
     timestamp: 60000,
     duree: 60000,
     status: null,
+    signal: null,
+    detectionCount: null,
+    battery: null,
     ...overrides,
   }
 }
@@ -42,6 +45,13 @@ function createTranspondeur(overrides = {}) {
     id: 'TRP-11',
     dossard: 11,
     deleted: false,
+    lastSignal: null,
+    lastDetectionCount: null,
+    lastBattery: null,
+    sumSignal: 0,
+    sumDetectionCount: 0,
+    sumBattery: 0,
+    statsCount: 0,
     ...overrides,
   }
 }

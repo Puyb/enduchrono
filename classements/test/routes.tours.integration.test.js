@@ -97,8 +97,8 @@ describe('routes GET /tours et /tours/count', function () {
     const page1 = await app.inject({ method: 'GET', url: '/tours?limit=2' })
     expect(page1.json()).to.deep.equal({
       tours: [
-        { id: 3, numero: 3, transpondeur: 'TP-11', dossard: 11, timestamp: 3000, source: 'chrono', status: null, deleted: 0, numeroEquipe: 3, duree: 1000 },
-        { id: 2, numero: 2, transpondeur: 'TP-11', dossard: 11, timestamp: 2000, source: 'chrono', status: null, deleted: 0, numeroEquipe: 2, duree: 1000 },
+        { id: 3, numero: 3, transpondeur: 'TP-11', dossard: 11, timestamp: 3000, source: 'chrono', status: null, signal: null, detectionCount: null, battery: null, deleted: 0, numeroEquipe: 3, duree: 1000 },
+        { id: 2, numero: 2, transpondeur: 'TP-11', dossard: 11, timestamp: 2000, source: 'chrono', status: null, signal: null, detectionCount: null, battery: null, deleted: 0, numeroEquipe: 2, duree: 1000 },
       ],
       hasMore: true,
     })
@@ -140,6 +140,29 @@ describe('routes GET /tours et /tours/count', function () {
 
     const search = await app.inject({ method: 'GET', url: '/tours?search=TP-21' })
     expect(search.json().tours.map(t => t.id)).to.deep.equal([3])
+  })
+
+  it('filtre par transpondeur, tous statuts confondus (historique popup graph)', async () => {
+    await createTempDb('it-tours-transpondeur-filter')
+    const knex = sql.getKnex()
+    await seedTeam(knex, { equipe: 1, dossard: 11 })
+    await knex('tours').insert([
+      { id: 1, numero: 1, transpondeur: 'TP-11', dossard: 11, timestamp: 1000, source: 'chrono', status: null, signal: 95, detectionCount: 1, battery: 3, deleted: false },
+      { id: 2, numero: 2, transpondeur: 'TP-11', dossard: 11, timestamp: 2000, source: 'chrono', status: 'duplicate', signal: 60, detectionCount: 1, battery: 1, deleted: false },
+      { id: 3, numero: 3, transpondeur: 'TP-11', dossard: 11, timestamp: 3000, source: 'chrono', status: 'ignore', signal: 80, detectionCount: 1, battery: 2, deleted: false },
+      { id: 4, numero: 4, transpondeur: 'TP-11', dossard: 11, timestamp: 4000, source: 'chrono', status: 'deleted', signal: 40, detectionCount: 1, battery: 0, deleted: false },
+      { id: 5, numero: 5, transpondeur: 'TP-OTHER', dossard: null, timestamp: 5000, source: 'chrono', status: null, signal: 99, detectionCount: 1, battery: 3, deleted: false },
+    ])
+    await knex('course').update({ status: STATUS[2] })
+    await sql.load()
+    await models.changeStatus(STATUS[2])
+
+    const res = await app.inject({ method: 'GET', url: '/tours?transpondeur=TP-11' })
+    const body = res.json()
+    // tous statuts confondus (normal/duplicate/ignore/deleted), et un seul autre transpondeur exclu
+    expect(body.tours.map(t => t.id).sort()).to.deep.equal([1, 2, 3, 4])
+    expect(body.tours.find(t => t.id === 1)).to.include({ signal: 95, detectionCount: 1, battery: 3 })
+    expect(body.tours.find(t => t.id === 2)).to.include({ signal: 60, detectionCount: 1, battery: 1 })
   })
 
   it('/tours/count reflete getToursCounts()', async () => {

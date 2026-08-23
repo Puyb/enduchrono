@@ -174,6 +174,29 @@ describe('integration sqlite <-> memoire (backend)', function () {
     expect(categories.DUO.map(equipe => equipe.equipe)).to.deep.equal([2])
   })
 
+  it('load reconstruit last*/sum*/statsCount des transpondeurs a partir des tours persistes (survie redemarrage)', async () => {
+    await createTempDb('it-load-rebuild-telemetrie')
+    const knex = sql.getKnex()
+
+    await seedTeam(knex, { equipe: 1, dossard: 11 })
+    await knex('tours').insert([
+      { id: 1, numero: 1, transpondeur: 'TP-11', dossard: 11, timestamp: 1000, source: 'chrono', status: null, signal: 95, detectionCount: 1, battery: 3, deleted: false },
+      // tour sans telemetrie (ajout manuel) : ne doit ni ecraser last*, ni casser sum*
+      { id: 2, numero: 2, transpondeur: 'TP-11', dossard: 11, timestamp: 1500, source: 'manuel', status: null, deleted: false },
+      { id: 3, numero: 3, transpondeur: 'TP-11', dossard: 11, timestamp: 2000, source: 'chrono', status: 'duplicate', signal: 60, detectionCount: 2, battery: 1, deleted: false },
+    ])
+
+    await sql.load()
+
+    const transpondeur = transpondeurs['TP-11']
+    expect(transpondeur.passages).to.equal(3)
+    expect(transpondeur.lastSeen).to.equal(2000)
+    expect(transpondeur).to.include({
+      lastSignal: 60, lastDetectionCount: 2, lastBattery: 1,
+      sumSignal: 155, sumDetectionCount: 3, sumBattery: 4, statsCount: 2,
+    })
+  })
+
   it('open/close charge la bonne base puis remet a zero connexion + memoire + current.db', async () => {
     const fixtureA = await createTempDb('it-open-close-a')
     let knex = sql.getKnex()

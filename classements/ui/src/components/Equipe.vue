@@ -20,7 +20,7 @@
                   <EquipierTour :equipier="data.item" :tours="teamTours" />
               </template>
               <template #cell(transpondeurs)="data">
-                  <EquipierTranspondeurs :equipier="data.item" :tours="teamTours" />
+                  <EquipierTranspondeurs :equipier="data.item" :tours="teamTours" @show-transpondeur="selectedTranspondeurId = $event" />
               </template>
           </b-table>
         </b-col>
@@ -28,7 +28,7 @@
     </b-container>
     <b-tabs content-class="mt-3">
       <b-tab title="Tours" active>
-        <ToursTable :tours="tours" :fields="toursFields" :tbody-tr-class="rowClass" />
+        <ToursTable :tours="tours" :fields="toursFields" :tbody-tr-class="rowClass" @show-transpondeur="selectedTranspondeurId = $event" />
       </b-tab>
       <b-tab title="Graph">
         <b-aspect aspect="3:1">
@@ -36,6 +36,7 @@
         </b-aspect>
       </b-tab>
     </b-tabs>
+    <TranspondeurChart :transpondeurId="selectedTranspondeurId" @close="selectedTranspondeurId = null" />
   </div>
 </template>
 
@@ -46,16 +47,18 @@ import EquipeCategorie from './EquipeCategorie.vue'
 import EquipierTranspondeurs from './EquipierTranspondeurs.vue'
 import EquipierTour from './EquipierTour.vue'
 import ToursTable from './ToursTable.vue'
+import TranspondeurChart from './TranspondeurChart.vue'
 import { formatTime, formatDuree, insertTourDescending } from '../utils'
 import { bus } from '../eventBus'
 export default {
   name: 'Tours',
-  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, EquipierTour, ToursTable },
+  components: { EquipierChart, EquipePenalite, EquipeCategorie, EquipierTranspondeurs, EquipierTour, ToursTable, TranspondeurChart },
   props: {
     numero: null,
   },
   data() {
     return {
+      selectedTranspondeurId: null,
       // Historique complet des tours de l'equipe (pas la fenetre live bornee du
       // store), recupere via GET /tours?equipe=... et tenu a jour par le bus
       // d'evenements local (voir eventBus.js).
@@ -102,6 +105,18 @@ export default {
         {
           key: 'duree',
           sortable: true,
+        },
+        {
+          key: 'signal',
+          sortable: true
+        },
+        {
+          key: 'detectionCount',
+          sortable: true
+        },
+        {
+          key: 'battery',
+          sortable: true
         },
       ],
       equipierColors: ['primary', 'danger', 'success', 'warning', 'info'],

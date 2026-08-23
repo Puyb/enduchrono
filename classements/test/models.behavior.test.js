@@ -175,7 +175,10 @@ describe('models business behavior', () => {
 
       await models.addTour({ id: 10, transpondeur: 'UNKNOWN', timestamp: 12345 })
 
-      expect(transpondeurs.UNKNOWN).to.deep.equal({ id: 'UNKNOWN', dossard: null, deleted: false, passages: 1, lastSeen: 12345 })
+      expect(transpondeurs.UNKNOWN).to.deep.equal({
+        id: 'UNKNOWN', dossard: null, deleted: false, passages: 1, lastSeen: 12345,
+        sumSignal: 0, sumDetectionCount: 0, sumBattery: 0, statsCount: 0,
+      })
       expect(tours).to.have.length(1)
       expect(tours[0]).to.include({ numero: 10, transpondeur: 'UNKNOWN', dossard: null, status: null })
       expect(db.state.inserts.map(i => i.table)).to.include.members(['transpondeurs', 'tours'])
@@ -221,6 +224,40 @@ describe('models business behavior', () => {
 
       expect(tours.map(t => t.numero)).to.deep.equal([2, 1])
       expect(equipe.tours.map(t => t.timestamp)).to.deep.equal([1500, 2000])
+    })
+  })
+
+  describe('telemetrie signal/detectionCount/battery (registerTranspondeurStats)', () => {
+    it('accumule last*/sum*/statsCount sur plusieurs passages avec telemetrie', async () => {
+      registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000, signal: 95, detectionCount: 1, battery: 3 })
+      await models.addTour({ id: 2, transpondeur: 'TP-11', timestamp: 2000, signal: 60, detectionCount: 2, battery: 1 })
+
+      const transpondeur = transpondeurs['TP-11']
+      expect(transpondeur).to.include({
+        lastSignal: 60, lastDetectionCount: 2, lastBattery: 1,
+        sumSignal: 155, sumDetectionCount: 3, sumBattery: 4, statsCount: 2,
+      })
+    })
+
+    it('un tour sans telemetrie (ajout manuel) ne casse pas les sommes et garde les dernieres valeurs connues', async () => {
+      registerEquipe({ equipeId: 1, dossard: 11 })
+      registerTranspondeur('TP-11', 11)
+      await setStatus('COURSE')
+
+      await models.addTour({ id: 1, transpondeur: 'TP-11', timestamp: 1000, signal: 95, detectionCount: 1, battery: 3 })
+      // tour ajoute manuellement (ex. POST /tour) : pas de signal/detectionCount/battery
+      await models.addTour({ id: 2, transpondeur: 'TP-11', timestamp: 2000 })
+
+      const transpondeur = transpondeurs['TP-11']
+      expect(transpondeur.passages).to.equal(2)
+      expect(transpondeur.lastSeen).to.equal(2000)
+      // les dernieres valeurs connues restent celles du dernier tour avec telemetrie
+      expect(transpondeur).to.include({ lastSignal: 95, lastDetectionCount: 1, lastBattery: 3, sumSignal: 95, statsCount: 1 })
+      expect(transpondeur.sumSignal).to.be.a('number').and.not.NaN
     })
   })
 

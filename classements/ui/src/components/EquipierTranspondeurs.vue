@@ -1,6 +1,9 @@
 <template>
   <span>
-    {{ equipier.transpondeurs.filter(transpondeur => !transpondeur.deleted).map(v => v.id).join(', ') }}
+    <span v-for="(transpondeur, index) in activeTranspondeurs" :key="transpondeur.id">
+      <span v-if="index">, </span>{{ transpondeur.id }}
+      <BatteryIcon :value="liveBattery(transpondeur.id)" :transpondeurId="transpondeur.id" @click="$emit('show-transpondeur', $event)" />
+    </span>
     <b-button v-b-modal="id" variant="outline-primary" size="sm"><b-icon-pencil></b-icon-pencil></b-button>
     <b-modal :id="id" :title="title" @ok="onSubmit" @show="onShow">
       <b-table-simple>
@@ -30,9 +33,11 @@
 <script>
 import { formatTime } from '../utils'
 import * as _ from 'lodash'
+import BatteryIcon from './BatteryIcon.vue'
 export default {
   name: 'EquipierTranspondeurs',
   components: {
+    BatteryIcon,
   },
   props: {
     equipier: null,
@@ -47,8 +52,15 @@ export default {
   computed: {
     id() { return `modal-equipier-transpondeur-${this.equipier.dossard}` },
     title() { return `${this.equipier.dossard} ${this.equipier.nom} ${this.equipier.prenom}` },
+    activeTranspondeurs() { return this.equipier.transpondeurs.filter(transpondeur => !transpondeur.deleted) },
   },
   methods: {
+    // La derniere batterie vue vient du transpondeur "live" (store.state.transpondeurs,
+    // mis a jour a chaque passage) et non de equipier.transpondeurs, qui n'est qu'une
+    // copie figee au moment de l'affectation du transpondeur.
+    liveBattery(transpondeurId) {
+      return _.find(this.$store.state.transpondeurs, t => t.id === transpondeurId)?.lastBattery
+    },
     onShow() {
       this.newTranspondeurs = _.cloneDeep(this.equipier.transpondeurs)
     },

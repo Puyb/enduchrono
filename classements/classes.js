@@ -28,6 +28,26 @@ export const adjustToursPerMinute = (timestamp, delta) => {
   if (toursPerMinute[bucket] <= 0) delete toursPerMinute[bucket]
 }
 
+// Agrege les stats radio (signal/detectionCount/battery) d'un tour sur son transpondeur.
+// Utilise par models.js (temps reel) et sql.js (reconstruction au chargement d'une session)
+// pour ne jamais dupliquer cette logique. Ne comptabilise que les passages qui portent
+// effectivement une telemetrie : les tours ajoutes manuellement (POST /tour) ou importes
+// n'ont pas signal/detectionCount/battery, et ne doivent ni ecraser les dernieres valeurs
+// connues ni corrompre les sommes (d'ou la garde sur tour.signal, toujours present avec les
+// deux autres champs quand la trame vient de chrono).
+export const registerTranspondeurStats = (transpondeur, tour) => {
+  transpondeur.passages = (transpondeur.passages || 0) + 1
+  transpondeur.lastSeen = tour.timestamp
+  if (tour.signal == null) return
+  transpondeur.lastSignal = tour.signal
+  transpondeur.lastDetectionCount = tour.detectionCount
+  transpondeur.lastBattery = tour.battery
+  transpondeur.sumSignal = (transpondeur.sumSignal || 0) + tour.signal
+  transpondeur.sumDetectionCount = (transpondeur.sumDetectionCount || 0) + tour.detectionCount
+  transpondeur.sumBattery = (transpondeur.sumBattery || 0) + tour.battery
+  transpondeur.statsCount = (transpondeur.statsCount || 0) + 1
+}
+
 export const reset = () => {
   tours.length = 0
   for (const obj of [ transpondeurs, equipes, equipiers, categories ]) {

@@ -52,13 +52,20 @@ const applyCursor = (query, before) => {
 export default async function route(fastify, opts) {
   fastify.get('/tours', async function (request, reply) {
     const knex = getKnex()
-    const { before, status = 'all', dossard, equipe, search } = request.query
+    const { before, status = 'all', dossard, equipe, transpondeur, search } = request.query
     const limit = Math.min(Math.max(parseInt(request.query.limit) || DEFAULT_LIMIT, 1), MAX_LIMIT)
 
     let query = knex('tours').select('*').orderBy('timestamp', 'desc').orderBy('id', 'desc')
-    query = applyStatusFilter(query, status, getStatus() === 'TEST')
-    if (dossard) query = query.where('dossard', Number(dossard))
-    if (equipe) query = query.whereRaw('CAST(dossard / 10 AS INTEGER) = ?', [Number(equipe)])
+    if (transpondeur) {
+      // Historique brut d'un transpondeur (popup graphique signal/batterie) : tous les
+      // passages, quel que soit leur statut (doublon/supprime/ignore en phase de test),
+      // donc pas de filtrage par statut de course ici contrairement aux autres usages de /tours.
+      query = query.where('transpondeur', transpondeur)
+    } else {
+      query = applyStatusFilter(query, status, getStatus() === 'TEST')
+      if (dossard) query = query.where('dossard', Number(dossard))
+      if (equipe) query = query.whereRaw('CAST(dossard / 10 AS INTEGER) = ?', [Number(equipe)])
+    }
     query = applySearchFilter(query, search)
     query = applyCursor(query, before)
 

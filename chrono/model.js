@@ -17,6 +17,10 @@ const openOrCreate = async () => {
     table.increments('id')
     table.string('transpondeur')
     table.integer('timestamp')
+    table.integer('signal')
+    table.integer('detectionCount')
+    table.integer('battery')
+    table.string('message')
     table.primary(['id'])
   })
   return knex;
@@ -36,9 +40,9 @@ const getKnex = async () => {
   return currentKnexPromise
 }
 
-const savePassage = async ({ transpondeur, timestamp }) => {
+const savePassage = async ({ transpondeur, timestamp, signal, detectionCount, battery, message }) => {
   const knex = await getKnex()
-  const [id] = await knex.insert({ transpondeur, timestamp }).into('passages')
+  const [id] = await knex.insert({ transpondeur, timestamp, signal, detectionCount, battery, message }).into('passages')
   return id
 }
 
