@@ -46,6 +46,8 @@ socket.on('message', async (message, { address }) => {
         status = 'start'
         event.emit('start')
         toursSent = 0
+        tours.length = 0
+        toursToSend.length = 0
         if (!timestampTimer) {
           timestamp = 0
           timestampTimer = setInterval(() => {
@@ -121,8 +123,18 @@ export async function init() {
 }
 
 export async function addTour(tour, now) {
-  if (now) toursToSend.unshift(tour)
-  else toursToSend.push(tour)
+  if (now) {
+    // Insertion triee par timestamp : plusieurs appels successifs avec now=true
+    // (ex: injections de test) doivent rester dans l'ordre chronologique, sinon
+    // la boucle de la timeline (qui ne consomme que toursToSend[0]) reste bloquee
+    // derriere un tour "futur" pousse en tete par un unshift naif.
+    const ts = tourTimestamp(tour)
+    let i = toursToSend.length
+    while (i > 0 && tourTimestamp(toursToSend[i - 1]) > ts) i--
+    toursToSend.splice(i, 0, tour)
+  } else {
+    toursToSend.push(tour)
+  }
 }
 
 export function getTimestamp() { return timestamp }

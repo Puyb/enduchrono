@@ -38,7 +38,7 @@ const pendingCommands = {
       if (transpondeur === lastSeenTranspondeur && timestamp === lastSeenTimestamp) return
       lastSeenTranspondeur = transpondeur
       lastSeenTimestamp = timestamp
-      event.emit('passage', { transpondeur, timestamp })
+      event.emit('passage', { transpondeur, timestamp, signal: parseInt(signal), detectionCount: parseInt(detectionCount), battery: parseInt(battery) })
     }
   }
 }

@@ -377,7 +377,7 @@ describe('chrono functional - start/stop UDP (docker)', function () {
       onOpen: async () => {
         // meme trame envoyee 2 fois consecutivement : chrono.js doit dedoublonner
         // sur (transpondeur, timestamp) via lastSeenTranspondeur/lastSeenTimestamp
-        const frame = `<STA ${transpondeur} 00:00'05"000 99 01 3 1579>`
+        const frame = `<STA ${transpondeur} 00:00'00"500 99 01 3 1579>`
         await addToursRaw(`${frame}\n${frame}`)
       }
     })

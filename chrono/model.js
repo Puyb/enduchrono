@@ -29,7 +29,8 @@ const openOrCreate = async () => {
 const open = async filename => {
   return Knex({
     client: 'sqlite3',
-    connection: { filename }
+    connection: { filename },
+    useNullAsDefault: true
   })
 }
 

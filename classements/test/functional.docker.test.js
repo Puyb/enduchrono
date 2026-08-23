@@ -30,14 +30,19 @@ async function waitFor(check, options = {}) {
   } = typeof options === 'number' ? { timeout: options } : options
 
   const start = Date.now()
+  let lastError
 
   while (Date.now() - start < timeout) {
-    const value = await check()
-    if (value) return value
+    try {
+      const value = await check()
+      if (value) return value
+    } catch (err) {
+      lastError = err
+    }
     await delay(interval)
   }
 
-  throw new Error(`timeout waiting for ${label}`)
+  throw lastError || new Error(`timeout waiting for ${label}`)
 }
 
 async function waitForService(url, timeout = 45000) {
